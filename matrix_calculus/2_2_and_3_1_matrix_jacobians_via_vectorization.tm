@@ -8,6 +8,17 @@
     MIT 18.S096 Matrix Calculus For Machine Learning and Beyond
   </doc-subtitle>|<doc-date|March 17, 2024>>
 
+  <section|Differential>
+
+  <\equation*>
+    f<around*|(|A+d A|)>=f<around*|(|A|)>+f<rprime|'><around*|(|A|)><around*|[|d
+    A|]>+<text|higher-order stuff>
+  </equation*>
+
+  <\equation*>
+    d f<around*|(|A;d A|)>=f<rprime|'><around*|(|A|)><around*|[|d A|]>
+  </equation*>
+
   <section|Example>
 
   Let <math|f> be the following function that maps from
@@ -114,11 +125,6 @@
     \<otimes\>A<rsup|2>|)> vec<around*|(|d A|)>>>>>
   </eqnarray*>
 
-  <\eqnarray*>
-    <tformat|<table|<row|<cell|>|<cell|>|<cell|det<around*|(|A+d
-    A|)>-det<around*|(|A|)>>>|<row|<cell|>|<cell|=>|<cell|>>>>
-  </eqnarray*>
-
   \;
 </body>
 
@@ -130,7 +136,26 @@
 
 <\references>
   <\collection>
-    <associate|auto-1|<tuple|1|?|../../../../.TeXmacs/texts/scratch/no_name_29.tm>>
-    <associate|auto-2|<tuple|2|?|../../../../.TeXmacs/texts/scratch/no_name_29.tm>>
+    <associate|auto-1|<tuple|1|?>>
+    <associate|auto-2|<tuple|2|?>>
+    <associate|auto-3|<tuple|3|?>>
   </collection>
 </references>
+
+<\auxiliary>
+  <\collection>
+    <\associate|toc>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|1<space|2spc>Differential>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-1><vspace|0.5fn>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Example>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-2><vspace|0.5fn>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|3<space|2spc>Example>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-3><vspace|0.5fn>
+    </associate>
+  </collection>
+</auxiliary>

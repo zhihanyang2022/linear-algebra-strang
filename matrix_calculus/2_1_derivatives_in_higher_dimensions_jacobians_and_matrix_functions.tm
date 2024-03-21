@@ -48,6 +48,12 @@
   <math|<with|font-series|bold|x>>. The <with|font-shape|italic|gradient> is
   simply the transpose of the derivative.
 
+  <with|font-series|bold|Differential.> The <math|m\<times\>1> vector <math|d
+  f<around*|(|<with|font-series|bold|x>;d<with|font-series|bold|x>|)>=A<around*|(|<with|font-series|bold|x>|)><around*|(|d<with|font-series|bold|x>|)>>,
+  which is a linear function of <math|d<with|font-series|bold|x>>, is called
+  the (first) <with|font-shape|italic|differential> of <math|f> at
+  <math|<with|font-series|bold|x>>.
+
   Magnus and Neudecker (1988) goes on to prove several important facts about
   differentiable functions:
 
@@ -224,6 +230,7 @@
     <associate|auto-3|<tuple|3|1>>
     <associate|auto-4|<tuple|4|2>>
     <associate|auto-5|<tuple|5|?>>
+    <associate|auto-6|<tuple|6|?>>
     <associate|footnote-1|<tuple|1|1>>
     <associate|footnote-2|<tuple|2|?>>
     <associate|footnr-1|<tuple|1|1>>
