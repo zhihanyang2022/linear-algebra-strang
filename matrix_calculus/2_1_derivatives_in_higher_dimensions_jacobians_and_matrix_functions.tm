@@ -13,14 +13,30 @@
   <section|Vector-to-vector functions>
 
   <with|font-series|bold|Differentiability.> Let <math|f> be a function
-  mapping from <math|\<bbb-R\><rsup|m>> to <math|\<bbb-R\><rsup|n>>. Let
-  <math|<with|font-series|bold|x>,d<with|font-series|bold|x>\<in\>\<bbb-R\><rsup|m>>.
+  defined on an open subset<\footnote>
+    While a lot of functions are defined on the entire
+    <math|\<bbb-R\><rsup|n>>, a lot of functions aren't (e.g.,
+    <math|f<around*|(|<with|font-series|bold|><with|font-series|bold|x>|)>=1\<oslash\><with|font-series|bold|x>>).
+  </footnote> <math|S\<subseteq\>\<bbb-R\><rsup|n>> mapping to
+  <math|\<bbb-R\><rsup|m>>. Let <math|<with|font-series|bold|x>> be an
+  interior point of <math|S> and <math|B<around*|(|<with|font-series|bold|x>,r|)>>
+  be an <math|n>-ball inside <math|S> (<math|r\<gtr\>0>). Let
+  <math|d<with|font-series|bold|x>\<in\>\<bbb-R\><rsup|n>> be such that
+  <math|<with|font-series|bold|x>+d<with|font-series|bold|x>\<in\>B<around*|(|<with|font-series|bold|x>,r|)>>.
   If there exists a real <math|m\<times\>n> matrix <math|A>, depending on
   <math|<with|font-series|bold|x>> but not <math|d<with|font-series|bold|x>>,
   such that
 
   <\equation*>
-    f<around*|(|<with|font-series|bold|x>+d<with|font-series|bold|x>|)>=f<around*|(|<with|font-series|bold|x>|)>+<with|font-series|bold|A><around*|(|<with|font-series|bold|x>|)><around*|(|d<with|font-series|bold|x>|)>+r<rsub|<with|font-series|bold|x>><around*|(|d<with|font-series|bold|x>|)><space|1em>with<space|1em>lim<rsub|u\<rightarrow\>0><frac|r<rsub|<with|font-series|bold|x>><around*|(|d<with|font-series|bold|u>|)>|<around*|\<\|\|\>|d<with|font-series|bold|u>|\<\|\|\>>>=0,
+    f<around*|(|<with|font-series|bold|x>+d<with|font-series|bold|x>|)>=f<around*|(|<with|font-series|bold|x>|)>+A<around*|(|<with|font-series|bold|x>|)><around*|(|d<with|font-series|bold|x>|)>+r<rsub|<with|font-series|bold|x>><around*|(|d<with|font-series|bold|x>|)>
+  </equation*>
+
+  for all <math|d<with|font-series|bold|x>\<in\>\<bbb-R\><rsup|n>> such that
+  <math|<with|font-series|bold|x>+d<with|font-series|bold|x>\<in\>B<around*|(|<with|font-series|bold|x>,r|)>>
+  and
+
+  <\equation*>
+    lim<rsub|d<with|font-series|bold|x>\<rightarrow\>0><frac|r<rsub|<with|font-series|bold|x>><around*|(|d<with|font-series|bold|x>|)>|<around*|\<\|\|\>|d<with|font-series|bold|x>|\<\|\|\>>>=0,
   </equation*>
 
   then <math|f> is said to be <with|font-shape|italic|differentiable> at
@@ -209,7 +225,9 @@
     <associate|auto-4|<tuple|4|2>>
     <associate|auto-5|<tuple|5|?>>
     <associate|footnote-1|<tuple|1|1>>
+    <associate|footnote-2|<tuple|2|?>>
     <associate|footnr-1|<tuple|1|1>>
+    <associate|footnr-2|<tuple|2|?>>
   </collection>
 </references>
 
