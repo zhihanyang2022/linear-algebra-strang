@@ -8,7 +8,7 @@
     MIT 18.S096 Matrix Calculus For Machine Learning and Beyond
   </doc-subtitle>|<doc-date|March 25, 2024>>
 
-  <section|Finite-difference for vector-to-scalar functions>
+  <section|Finite-difference approximation for vector-to-scalar functions>
 
   This part largely follows from Section 8.1 of Numerical Optimization by
   Nocedal and Wright.
@@ -126,7 +126,7 @@
   which is what's used in most packages. In PyTorch,
   <math|<with|font-series|bold|u>=1\<times\>10<rsup|-6>>.\ 
 
-  <section|Finite-difference for matrix-to-matrix functions>
+  <section|Finite-difference approximation for matrix-to-matrix functions>
 
   Let <math|v> be a generic vector (could be a scalar, a vector or a matrix).
   Then, in the differential notation, we have
