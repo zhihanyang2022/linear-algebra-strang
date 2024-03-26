@@ -3,7 +3,7 @@
 <style|generic>
 
 <\body>
-  <doc-data|<doc-title|Lecture 4 Part 2: Finite-difference
+  <doc-data|<doc-title|Lecture 3 Part 2: Finite-difference
   Approximations>|<\doc-subtitle>
     MIT 18.S096 Matrix Calculus For Machine Learning and Beyond
   </doc-subtitle>|<doc-date|March 25, 2024>>
@@ -199,7 +199,8 @@
   <\collection>
     <\associate|toc>
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|1<space|2spc>Finite-difference
-      for vector-to-scalar functions> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      approximation for vector-to-scalar functions>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-1><vspace|0.5fn>
 
       <with|par-left|<quote|1tab>|1.1<space|2spc>Truncation error
@@ -211,7 +212,8 @@
       <no-break><pageref|auto-3>>
 
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Finite-difference
-      for matrix-to-matrix functions> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      approximation for matrix-to-matrix functions>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4><vspace|0.5fn>
     </associate>
   </collection>
