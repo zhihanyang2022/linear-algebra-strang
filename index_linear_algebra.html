@@ -1,0 +1,83 @@
+<style>
+li {
+  margin: 10px 0;
+}
+html {
+  font-family: Georgia, serif;
+  margin: 50 50; 
+  background-color: rgb(255, 255, 249);
+  font-size: 15px;
+}
+</style>
+
+<html>
+
+<!-- 
+<style>
+.content {
+  max-width: 1000px;
+  margin: auto;
+  text-align: center;
+}
+.box {
+  width: 1000px;
+  padding: 10px;
+  margin: auto;
+  text-align: center;
+}
+
+</style>
+ -->
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+ 
+<title>Linear Algebra Notes</title>
+
+<h2>MIT 18.06 Linear Algebra</h2>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 1: Geometry of linear equations [<a href="./linear_algebra/1 Geometry of linear equations.pdf">PDF</a>]</p>
+
+<ul>
+<li>Fundamental problem of linear algebra: solving m equations with n unknowns</li>
+<li>Row and column picture of a 2x2 system Ax=b</li>
+<li>Row and column picture of a 3x3 system Ax=b</li>
+<li>Can I solve Ax=b for every b? In other words, do the combinations of columns of A fill R^3? If not, how could it go wrong?</li>
+<li>Ax is a linear combination of the columns of A</li>
+</ul>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 2: Elimination with matrices [<a href="./linear_algebra/2 Elimination with matrices.pdf">PDF</a>]</p>
+
+<ul>
+<li>Elimination and backsubstitution for solving a 3x3 system (very natural idea)</li>
+<li>Vector-matrix product as combination of rows in the matrix</li>
+<li>Elimination in matrix notation (same 3x3 system as above)</li>
+</ul>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 3: Matrix operations and inverses [<a href="./linear_algebra/3 Multiplication and inverse matrices.pdf">PDF</a>]</p>
+
+<ul>
+<li>4 ways of looking at matrix-matrix multiplication; block multiplication</li>
+<li>Definition of inverse; finding the inverse is like solving n systems (A is nxn)</li>
+<li>Gauss-Jordan elimination (solving n equations at once) E[A I] = [I A^{-1}]</li>
+</ul>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 4: LU and LDU factorization [<a href="./linear_algebra/4 LU and LDU factorization.pdf">PDF</a>]</p>
+
+<ul>
+<li>Inverse of AB</li>
+<li>Inverse of \( A^{T} \)</li>
+<li>Elimination as A=LU instead of EA=L; one 2x2 example; one 3x3 example showing the advantage of this representation</li>
+<li>Elimination (i.e., finding LU; just record the row operations in L and the result as U) is \( \mathcal{O} (n^3) \); afterwards solving for different b's is \( \mathcal{O} (n^2) \)</li>
+</ul>
+
+<hr>
+
+</html>
