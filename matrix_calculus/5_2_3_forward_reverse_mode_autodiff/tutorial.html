@@ -1,0 +1,1447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:x="https://www.texmacs.org/2002/extensions" xmlns:m="http://www.w3.org/1998/Math/MathML">
+  <head>
+    <title>First-Order Automatic Differentiation in JAX</title>
+    <meta charset="utf-8" content="TeXmacs 2.1.4" name="generator"></meta>
+    <style type="text/css">
+      body { text-align: justify } h5 { display: inline; padding-right: 1em }
+      h6 { display: inline; padding-right: 1em } table { border-collapse:
+      collapse } td { padding: 0.2em; vertical-align: baseline } dt { float:
+      left; min-width: 1.75em; text-align: right; padding-right: 0.75em;
+      font-weight: bold; } dd { margin-left: 2.75em; padding-bottom: 0.25em; }
+      dd p { padding-top: 0em; } .subsup { display: inline; vertical-align:
+      -0.2em } .subsup td { padding: 0px; text-align: left} .fraction {
+      display: inline; vertical-align: -0.8em } .fraction td { padding: 0px;
+      text-align: center } .wide { position: relative; margin-left: -0.4em }
+      .accent { position: relative; margin-left: -0.4em; top: -0.1em }
+      .title-block { width: 100%; text-align: center } .title-block p {
+      margin: 0px } .compact-block p { margin-top: 0px; margin-bottom: 0px }
+      .left-tab { text-align: left } .center-tab { text-align: center }
+      .balloon-anchor { border-bottom: 1px dotted #000000; outline: none;
+      cursor: help; position: relative; } .balloon-anchor [hidden] {
+      margin-left: -999em; position: absolute; display: none; }
+      .balloon-anchor: hover [hidden] { position: absolute; left: 1em; top:
+      2em; z-index: 99; margin-left: 0; width: 500px; display: inline-block; }
+      .balloon-body { } .ornament { border-width: 1px; border-style: solid;
+      border-color: black; display: inline-block; padding: 0.2em; } .right-tab
+      { float: right; position: relative; top: -1em; } .no-breaks {
+      white-space: nowrap; } .underline { text-decoration: underline; }
+      .overline { text-decoration: overline; } .strike-through {
+      text-decoration: line-through; } del { text-decoration: line-through
+      wavy red; } .fill-out { text-decoration: underline dotted; } 
+    </style>
+  </head>
+  <body>
+    <table class="title-block" style="margin-bottom: 2em">
+      <tr>
+        <td><table class="title-block" style="margin-top: 0.5em; margin-bottom: 0.5em">
+          <tr>
+            <td><font style="font-size: 168.2%"><strong>First-Order Automatic Differentiation in
+            JAX</strong></font></td>
+          </tr>
+        </table><table class="title-block" style="margin-top: 0.25em; margin-bottom: 0.5em">
+          <tr>
+            <td><font style="font-size: 129.7%"><strong>An In-Depth Tutorial</strong></font></td>
+          </tr>
+        </table><div class="compact-block" style="margin-top: 1em; margin-bottom: 1em">
+          <table class="title-block">
+            <tr>
+              <td><p style="margin-top: 0.5em; margin-bottom: 0.5em">
+                <div style="display: inline">
+                  <span style="margin-left: 0pt"></span>
+                </div>
+                <table style="display: inline-table; vertical-align: middle">
+                  <tbody><tr>
+                    <td style="text-align: center; padding-left: 0em; padding-right: 0em; padding-bottom: 0em; padding-top: 0em; width: 100%"><center>
+                      <p>
+                        <b>Zhihan Yang</b>
+                      </p>
+                      <p>
+                        
+                      </p>
+                      <p>
+                        Department of Computer Science
+                      </p>
+                      <p>
+                        Cornell University
+                      </p>
+                      <p>
+                        Ithaca, NY 14853
+                      </p>
+                      <pre class="verbatim" xml:space="preserve">
+zhihany@cornell.edu</pre>
+                    </center></td>
+                  </tr></tbody>
+                </table>
+              </p></td>
+            </tr>
+          </table>
+        </div></td>
+      </tr>
+    </table>
+    <div style="margin-top: 2em; margin-bottom: 0.5em; margin-left: 60px; margin-right: 60px">
+      <p style="margin-bottom: 0.5em">
+        <font style="font-size: 84.1%"><strong>Abstract</strong></font>
+      </p>
+    </div>
+    <div style="margin-left: 60px; margin-right: 60px">
+      <p>
+        <font style="font-size: 84.1%">JAX is a high-performance numerical-computing library in
+        Python recently developed by Google. With a syntax similar to Numpy,
+        it also features just-in-time compilation, automatic differentiation
+        (AD), and hardware acceleration via XLA<div class="footnote">
+          <font style="font-size: 77.1%"><div align="justify">
+            <div style="margin-left: -60px">
+              <div style="margin-right: -60px">
+                <class style="font-style: normal"><p>
+                  1. According to Google video, this is how JAX got its name
+                </p></class>
+              </div>
+            </div>
+          </div></font>
+        </div><span style="margin-left: 0em"></span><a id="footnr-1"></a><sup><class style="font-style: normal"><a href="#footnote-1">1</a></class></sup>.
+        This tutorial explores two critical aspects of JAX's AD system for
+        computing first-order derivatives<div class="footnote">
+          <font style="font-size: 77.1%"><div align="justify">
+            <div style="margin-left: -60px">
+              <div style="margin-right: -60px">
+                <class style="font-style: normal"><p>
+                  2. Also called gradients. We do not include hessian
+                  computation this in tutorial.
+                </p></class>
+              </div>
+            </div>
+          </div></font>
+        </div><span style="margin-left: 0em"></span><a id="footnr-2"></a><sup><class style="font-style: normal"><a href="#footnote-2">2</a></class></sup>.
+        </font>
+      </p>
+    </div>
+    <div style="margin-left: 60px; margin-right: 60px">
+      <p>
+        <font style="font-size: 84.1%">Generally, we want use AD to find the derivative of each
+        output scalar variable<div class="footnote">
+          <font style="font-size: 77.1%"><div align="justify">
+            <div style="margin-left: -60px">
+              <div style="margin-right: -60px">
+                <class style="font-style: normal"><p>
+                  3. These scalar variables may be organized in vectors,
+                  matrices or tensors.
+                </p></class>
+              </div>
+            </div>
+          </div></font>
+        </div><span style="margin-left: 0em"></span><a id="footnr-3"></a><sup><class style="font-style: normal"><a href="#footnote-3">3</a></class></sup>
+        with respect to each scalar input variable of a large acyclic
+        computational graph composed of simpler functions with their own
+        inputs and outputs. Most existing tutorials on AD assume that both the
+        computation graph and its consisting functions take in one
+        scalar/vector and outputs one scalar/vector. While this is fine for
+        pedagogy, it is not realistic since, in practice, functions can take
+        in and output a list<div class="footnote">
+          <font style="font-size: 77.1%"><div align="justify">
+            <div style="margin-left: -60px">
+              <div style="margin-right: -60px">
+                <class style="font-style: normal"><p>
+                  4. Tree is an interesting thing
+                </p></class>
+              </div>
+            </div>
+          </div></font>
+        </div><span style="margin-left: 0em"></span><a id="footnr-4"></a><sup><class style="font-style: normal"><a href="#footnote-4">4</a></class></sup>
+        of tensors. Indeed, the programming abstractions of JAX's AD system
+        were developed to compute derivatives of functions of such generality,
+        and can hence be cryptic for those who only understand AD for
+        scalar-to-scalar and vector-to-vector functions. </font>
+      </p>
+    </div>
+    <div style="margin-left: 60px; margin-right: 60px">
+      <p>
+        <font style="font-size: 84.1%">We first explain how deratives of such a computation
+        graph can be computed via forward-mode and reverse-mode AD; important
+        concepts such as Jaocbians, Jacobian-vector products and
+        vector-Jacobian products are discussed in great detail. Cmoputationa
+        graph input and output. Each function input and output. We then
+        explain how users can supply custom AD rules to differentiate through
+        functions that, e.g., does not include JAX code. Finally, we derive
+        from scratch AD rules for common functions. </font>
+      </p>
+    </div>
+    <div style="margin-bottom: 1em; margin-left: 60px; margin-right: 60px">
+      <p>
+        <font style="font-size: 84.1%">JAX is sophisticated codebase and we will not go to the
+        source code. Rather, it gives the reader a mental model of how common
+        JAX's functions work under the hood and relate to other. Prepare the
+        fully unlease the potential JAX for machine learning research.</font>
+      </p>
+    </div>
+    <h2>Table of contents<span style="margin-left: 1em"></span></h2>
+    <div class="compact-block" style="text-indent: 0em">
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>1<span style="margin-left: 1em"></span>Multivariate chain rule</b> <span style="margin-left: 5mm"></span>
+        <a href="#auto-1">2</a>
+      </p>
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>2<span style="margin-left: 1em"></span>A main goal of first-order automatic
+        differentiation</b> <span style="margin-left: 5mm"></span> <a href="#auto-2">4</a>
+      </p>
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>3<span style="margin-left: 1em"></span>Forward-mode automatic differentiation</b>
+        <span style="margin-left: 5mm"></span> <a href="#auto-3">5</a>
+      </p>
+      <p>
+        3.1<span style="margin-left: 1em"></span>Understanding <tt>jac.jacfwd</tt> <span style="margin-left: 5mm"></span>
+        <a href="#auto-4">5</a>
+      </p>
+      <p>
+        3.2<span style="margin-left: 1em"></span>Understanding <tt>jac.jvp</tt> <span style="margin-left: 5mm"></span>
+        <a href="#auto-5">6</a>
+      </p>
+      <p>
+        3.3<span style="margin-left: 1em"></span>How JAX uses <tt>jac.jvp</tt> to compute the
+        &ldquo;Jacobian&rdquo; ? <span style="margin-left: 5mm"></span> <a href="#auto-6">8</a>
+      </p>
+      <p>
+        3.4<span style="margin-left: 1em"></span>Defining custom JVP rules / pushforward rules
+        via <tt>jax.custom_jvp</tt> and <tt>f.defjvp</tt> <span style="margin-left: 5mm"></span>
+        <a href="#auto-7">8</a>
+      </p>
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>4<span style="margin-left: 1em"></span>Reverse-mode automatic differentiation</b>
+        <span style="margin-left: 5mm"></span> <a href="#auto-8">9</a>
+      </p>
+      <p>
+        4.1<span style="margin-left: 1em"></span>Computing the full &ldquo;Jacobian&rdquo; <span
+        style="margin-left: 5mm"></span> <a href="#auto-9">9</a>
+      </p>
+      <p>
+        4.2<span style="margin-left: 1em"></span>Understanding <tt>jax.vjp</tt> <span style="margin-left: 5mm"></span>
+        <a href="#auto-10">10</a>
+      </p>
+      <p>
+        4.3<span style="margin-left: 1em"></span>Understanding <tt>jax.jacrev</tt> <span style="margin-left: 5mm"></span>
+        <a href="#auto-11">12</a>
+      </p>
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>5<span style="margin-left: 1em"></span>Comparing forward mode and reverse mode</b>
+        <span style="margin-left: 5mm"></span> <a href="#auto-12">12</a>
+      </p>
+      <p style="margin-top: 1em; margin-bottom: 0.5em">
+        <b>6<span style="margin-left: 1em"></span>Derivations of some JVP / pushforward
+        rules</b> <span style="margin-left: 5mm"></span> <a href="#auto-13">12</a>
+      </p>
+      <p>
+        6.1<span style="margin-left: 1em"></span>Scalar addition <span style="margin-left: 5mm"></span> <a href="#auto-14">12</a>
+      </p>
+      <p>
+        6.2<span style="margin-left: 1em"></span>Scalar multiplication <span style="margin-left: 5mm"></span> <a
+        href="#auto-15">12</a>
+      </p>
+      <p>
+        6.3<span style="margin-left: 1em"></span>Scalar sine <span style="margin-left: 5mm"></span> <a href="#auto-16">12</a>
+      </p>
+      <p>
+        6.4<span style="margin-left: 1em"></span>Broadcasted function <span style="margin-left: 5mm"></span> <a
+        href="#auto-17">12</a>
+      </p>
+      <p>
+        6.5<span style="margin-left: 1em"></span>Matrix-vector product <span style="margin-left: 5mm"></span> <a
+        href="#auto-18">12</a>
+      </p>
+      <p>
+        6.6<span style="margin-left: 1em"></span>Scalar root-finding <span style="margin-left: 5mm"></span> <a
+        href="#auto-19">13</a>
+      </p>
+      <p>
+        6.7<span style="margin-left: 1em"></span>Matrix-matrix product <span style="margin-left: 5mm"></span> <a
+        href="#auto-20">13</a>
+      </p>
+      <p>
+        6.8<span style="margin-left: 1em"></span>L2 loss <span style="margin-left: 5mm"></span> <a href="#auto-21">14</a>
+      </p>
+      <p>
+        6.9<span style="margin-left: 1em"></span>Linear system <span style="margin-left: 5mm"></span> <a href="#auto-22">14</a>
+      </p>
+      <p>
+        6.10<span style="margin-left: 1em"></span>Nonlinear system solve <span style="margin-left: 5mm"></span> <a
+        href="#auto-23">14</a>
+      </p>
+      <p>
+        6.11<span style="margin-left: 1em"></span>Neural ODE <span style="margin-left: 5mm"></span> <a href="#auto-24">14</a>
+      </p>
+      <p>
+        6.12<span style="margin-left: 1em"></span>Softmax <span style="margin-left: 5mm"></span> <a href="#auto-25">14</a>
+      </p>
+    </div>
+    <h2 id="auto-1">1<span style="margin-left: 1em"></span>Multivariate chain rule<span style="margin-left: 1em"></span></h2>
+    <p>
+      The most important theorem for understanding automatic differentiation
+      is the multivariate chain rule. In this section, we present three
+      versions of this rule with increasing generality. In a college-level
+      multivariate calculus class, one would learn the following version of
+      this rule: if four scalar variables <img src="tutorial-1.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.015490909090909em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img> and <img
+      src="tutorial-2.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0216727272727272em; vertical-align: 0em; height: 0.682666666666667em"></img> follow the relationship
+    </p>
+    <center>
+      <img src="tutorial-3.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img>
+    </center>
+    <p>
+      then the derivative of <img src="tutorial-4.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0154909090909091em; margin-top: -0.0263272727272728em; vertical-align: 0em; height: 0.496484848484848em"></img> with respect to <img src="tutorial-2.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0216727272727272em; vertical-align: 0em; height: 0.682666666666667em"></img> can be calculated as
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-5.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121224em; margin-top: -0.0326545454545455em; vertical-align: -0.873284848484849em; height: 2.2672em" id="eq:scalar-chain"></img></td>
+        <td align="right">(1)</td>
+      </tr>
+    </table>
+    <p>
+      Its proof can be found in any standard calculus textbook. 
+    </p>
+    <p>
+      <b>First generalization.</b> We can generalize this version a bit more.
+      If vectors <img src="tutorial-6.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121224em; margin-top: -0.026569696969697em; vertical-align: -0.201115151515152em; height: 1.11573333333333em"></img> follow the relationship
+    </p>
+    <center>
+      <img src="tutorial-7.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121207em; margin-top: -0.0119757575757576em; vertical-align: -0.201115151515152em; height: 0.974472727272727em"></img>
+    </center>
+    <p>
+      then the derivative of <img src="tutorial-8.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.105357575757576em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img> with respect to <img src="tutorial-9.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img> can be calculated as the following matrix multiplication
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-10.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121207em; margin-top: -0.0119757575757575em; vertical-align: -2.31192727272727em; height: 3.68884848484849em" id="eq:vector-chain"></img></td>
+        <td align="right">(2)</td>
+      </tr>
+    </table>
+    <p>
+      where the three matrices above from the left to right are the Jacobian
+      of <img src="tutorial-8.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.105357575757576em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img> with respect to <span class="no-breaks"><img src="tutorial-9.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img>,</span>
+      the Jacobian of <img src="tutorial-8.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.105357575757576em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img> with respect to <span class="no-breaks"><img
+      src="tutorial-11.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0839272727272726em; margin-top: -0.0119757575757576em; vertical-align: -0.201115151515152em; height: 0.974472727272727em"></img>,</span> and the Jacobian of <img src="tutorial-11.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0839272727272726em; margin-top: -0.0119757575757576em; vertical-align: -0.201115151515152em; height: 0.974472727272727em"></img>
+      with respect to <span class="no-breaks"><img src="tutorial-9.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img>:</span>
+    </p>
+    <center>
+      <img src="tutorial-12.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.053818181818182em; margin-right: -0.0124121212121224em; margin-top: 0.0165333333333333em; vertical-align: -2.37350303030303em; height: 5.25013333333333em"></img>
+    </center>
+    <p>
+      To verify Equation <a href="#eq:vector-chain">2</a>, one may start with the definition of
+      matrix multiplication:
+    </p>
+    <center>
+      <img src="tutorial-13.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121224em; margin-top: -0.0141575757575756em; vertical-align: -1.25956363636364em; height: 3.01772121212121em"></img>
+    </center>
+    <p>
+      But the left-hand side and right-hand side are, respectively, just 
+    </p>
+    <center>
+      <img src="tutorial-14.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121207em; margin-top: -0.0141575757575758em; vertical-align: -1.21178181818182em; height: 3.01772121212121em"></img>
+    </center>
+    <p>
+      which is in essense no different from Equation <a href="#eq:scalar-chain">1</a>! Also,
+      note how this is the dot product of the <span class="no-breaks"><img src="tutorial-15.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: 0em; height: 0.71990303030303em"></img>-th</span>
+      row of <img src="tutorial-16.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0839272727272729em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img> and the <span class="no-breaks"><img src="tutorial-17.png" style="margin-left: -0.0248242424242424em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: -0.201115151515152em; height: 0.91849696969697em"></img>-th</span>
+      column of <span class="no-breaks"><img src="tutorial-18.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121211em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img>.</span> 
+    </p>
+    <p>
+      <b>Second generalization.</b> We can generalize the multivariate chain
+      rule even further. Suppose (real) tensors, or multidimensional arrays,
+      <img src="tutorial-19.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0510787878787879em; margin-top: -0.0131151515151515em; vertical-align: -0.201115151515152em; height: 0.930909090909091em"></img> follow the following relationship
+    </p>
+    <center>
+      <img src="tutorial-20.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121215em; margin-top: -0.0131151515151515em; vertical-align: 0em; height: 0.732315151515152em"></img>
+    </center>
+    <p>
+      This is the most general version, since tensors include scalars and
+      vectors. Since these tensors can each have an arbitrary number of
+      dimensions, we will resort to an example here, where we assume that
+      <span class="no-breaks"><img src="tutorial-21.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0244121212121229em; margin-top: -0.0327757575757576em; vertical-align: -0.201115151515152em; height: 1.10952727272727em"></img>.</span> The derivative of <img src="tutorial-22.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0510787878787879em; margin-top: -0.0131151515151515em; vertical-align: 0em; height: 0.732315151515152em"></img> with respect to <img src="tutorial-23.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.030569696969697em; margin-top: -0.0131151515151515em; vertical-align: 0em; height: 0.732315151515152em"></img> can be written as
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-24.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121224em; margin-top: -0.0140363636363636em; vertical-align: -2.11081212121212em; height: 3.46899393939394em" id="eq:tensor-chain"></img></td>
+        <td align="right">(3)</td>
+      </tr>
+    </table>
+    <p>
+      where the three tensors are defined as
+    </p>
+    <center>
+      <img src="tutorial-25.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969701em; vertical-align: -3.99481212121212em; height: 8.47515151515152em"></img>
+    </center>
+    <p>
+      and the &ldquo;:&rdquo; operator denotes <i>tensor contraction</i>,
+      which is defined as
+    </p>
+    <center>
+      <img src="tutorial-26.png" style="margin-left: 0em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -2.60225454545455em; height: 4.12169696969697em"></img>
+    </center>
+    <p>
+      The &ldquo;&sdot;&rdquo; operator denotes the <i>tensor dot product</i>,
+      which multiplies two tensors element-wise and sum up all resulting
+      products into a single scalar. Unfortunately, tensors are
+      high-dimensional so we can't write them out as in the vector case. But
+      recall that the dot product was important in the vector case, too: <img
+      src="tutorial-27.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0205818181818181em; margin-right: -0.0124121212121211em; margin-top: -0.0124363636363636em; vertical-align: -0.289163636363636em; height: 1.09791515151515em"></img> is the dot product of the <span class="no-breaks"><img src="tutorial-15.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: 0em; height: 0.71990303030303em"></img>-th</span> row of <img src="tutorial-16.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0839272727272729em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img> and the <span
+      class="no-breaks"><img src="tutorial-17.png" style="margin-left: -0.0248242424242424em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: -0.201115151515152em; height: 0.91849696969697em"></img>-th</span> column of <span class="no-breaks"><img
+      src="tutorial-18.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121211em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img>.</span> 
+    </p>
+    <p style="margin-top: 1em; margin-bottom: 1em">
+      <strong>Remark <class style="font-style: normal">1</class>. </strong>Equation <a href="#eq:vector-chain">2</a>
+      and <a href="#eq:tensor-chain">3</a> are the same as Equation <a href="#eq:scalar-chain">1</a> except that,
+      for Equation <a href="#eq:vector-chain">2</a> and <a href="#eq:tensor-chain">3</a>, the variables are
+      organized in more complicated structures. Therefore, one has to rely on
+      matrix multiplication and, more generally, tensor contraction, to
+      express the multivariate chain rule involving these complicated
+      structures.
+    </p>
+    <div style="text-indent: 0em; margin-top: 0.5em; margin-bottom: 0.5em">
+      <table style="width: 100%">
+        <tbody><tr>
+          <td style="width: 100%; white-space: nowrap; padding-left: 0em; text-align: center"><img src="tutorial-28.png" style="margin-left: -0.0124121212121212em; margin-bottom: 0.0350787878787879em; margin-right: -0.0124121212121207em; margin-top: 0.0311030303030303em; vertical-align: -0.284242424242424em; height: 0.968145454545455em"></img></td>
+          <td style="white-space: nowrap; padding-right: 0em; text-align: right"><class style="font-style: normal">(4)</class><a id="eq:tensor-chain-sum"></a></td>
+        </tr></tbody>
+      </table>
+    </div>
+    <h2 id="auto-2">2<span style="margin-left: 1em"></span>A main goal of first-order automatic
+    differentiation<span style="margin-left: 1em"></span></h2>
+    <p>
+      Consider a directed acyclic computation graph that takes in
+      <img src="tutorial-29.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0874666666666666em; margin-top: -0.0131151515151515em; vertical-align: 0em; height: 0.732315151515152em"></img>
+      tensors and spits out
+      <img src="tutorial-30.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0888242424242425em; margin-top: -0.0131151515151515em; vertical-align: 0em; height: 0.732315151515152em"></img>
+      tensors, with no restriction on the shape of each tensor; these tensors
+      may be organized in pytrees
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                5. JAX uses the term &ldquo;pytree&rdquo; to refer to &ldquo;a
+                tree-like structure built out of container-like Python
+                objects&rdquo;. For example, if <tt class="verbatim">A</tt> and <tt
+                class="verbatim">B</tt> are two JAX tensors, then <tt class="verbatim">[A,
+                {&quot;data&quot;: B}]</tt> would be a pytree. Pytrees have
+                very flexible structures and, for the sake of conciseness, we
+                will leave them out in the remainder of this tutorial.
+              </p></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-5"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-5">5</a></class></sup>
+      . This is, of course, a very general setup. We view this graph as a
+      function and denote it by
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>:</span>
+    </p>
+    <center>
+      <img src="tutorial-32.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121189em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+    </center>
+    <p>
+      One main
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                6. By &ldquo;main&rdquo;, we mean that any AD system should be
+                able to compute the &ldquo;Jacobian&rdquo; efficiently one way
+                or another. 
+              </p></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-6"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-6">6</a></class></sup>
+      goal of first-order AD is to obtain the following matrix of tensors: 
+    </p>
+    <center>
+      <img src="tutorial-33.png" style="margin-left: -0.0248242424242424em; margin-bottom: -0.053818181818182em; margin-right: -0.0124121212121207em; margin-top: 0.0165333333333333em; vertical-align: -2.64261818181818em; height: 5.68453333333333em"></img>
+    </center>
+    <p>
+      where
+      <span class="no-breaks"><img src="tutorial-34.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121211em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img>-th</span>
+      entry of this matrix,
+      <span class="no-breaks"><img src="tutorial-35.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>,</span>
+      is a tensor whose shape is the concatenation of the shapes of
+      <img src="tutorial-36.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121213em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>
+      and
+      <span class="no-breaks"><img src="tutorial-37.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span>
+      More specifically, if
+      <img src="tutorial-38.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0154181818181818em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.0404363636363636em; height: 1.01798787878788em"></img>
+      and
+      <span class="no-breaks"><img src="tutorial-39.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0154181818181818em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.0404363636363636em; height: 1.01798787878788em"></img>,</span>
+      then
+      <img src="tutorial-35.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+      would be in 5 dimensions with
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                7. We sometimes group the indices to make it more explicit
+                where each group comes from; the following two notations are
+                equivalent in this tutorial:
+              </p><center>
+                <img src="tutorial-40.png" style="margin-left: 0em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -1.47391515151515em; height: 3.30366060606061em"></img>
+              </center></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-7"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-7">7</a></class></sup>
+    </p>
+    <center>
+      <img src="tutorial-41.png" style="margin-left: 0em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121207em; margin-top: -0.0144969696969697em; vertical-align: -1.29292121212121em; height: 3.13609696969697em"></img>
+    </center>
+    <p>
+      We have put quotation marks around the word Jacobian because this matrix
+      above does indeed contain all the required partial derivatives but is
+      not the standard Jacobian of vector-to-vector functions. Whenever we use
+      &ldquo;Jacobian&rdquo; later on, we are referring to this very matrix
+      above. 
+    </p>
+    <p>
+      Since each input and output tensor could have a different shape, the
+      &ldquo;Jacobian&rdquo; is best represented as a nested tuple (i.e., a
+      tuple of tuples) of matrices in Python. Below, let's try out <tt class="verbatim">jax.jacfwd</tt>
+      and <tt class="verbatim">jax.jacrev</tt>, two JAX functions that compute the
+      &ldquo;Jacobian&rdquo;, to see if this is indeed what they do. <tt
+      class="verbatim">jax.jacfwd</tt> and <tt class="verbatim">jax.jacrev</tt> computes the
+      &ldquo;Jacobian&rdquo; via <i>forward-mode</i> (Section <a href="#sec:fm">3</a>)
+      and <i>reverse-mode</i> AD (Section <a href="#sec:rm">4</a>) respectively. These
+      two modes will be discussed at length later.
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+def g(X1, X2):
+    Y1 = X1 @ X2
+    Y2 = X * X
+    return Y1, Y2
+    
+key = jax.random.key(42)
+X1_key, X2_key = jax.random.split(key, 2)
+X1 = jax.random.normal(X1_key, shape=(2, 3))
+X2 = jax.random.normal(X2_key, shape=(3, 4))
+
+Y1, Y2 = g(X1, X2)
+print(Y1.shape, Y2.shape)  # (2, 4) (2, 3)
+
+jac_fwd = jax.jacfwd(g, argnums=(0, 1))(X1, X2)
+# first row of the nested tuple
+print(jac_fwd[0][0].shape, jac_fwd[0][1].shape)  # (2, 4, 2, 3) (2, 4, 3, 4)
+# second row of the nested tuple
+print(jac_fwd[1][0].shape, jac_fwd[1][1].shape)  # (2, 3, 2, 3) (2, 3, 3, 4)
+
+jac_rev = jax.jacrev(g, argnums=(0, 1))(X1, X2)
+# first row of the nested tuple
+print(jac_rev[0][0].shape, jac_rev[0][1].shape)  # (2, 4, 2, 3), (2, 4, 3, 4)
+# second row of the nested tuple
+print(jac_rev[1][0].shape, jac_rev[1][1].shape)  # (2, 3, 2, 3), (2, 3, 3, 4)</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      Before we start later sections, there are two important things to note.
+      Firstly, in practice, one would define the function <img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>
+      using some simpler functions. In this tutorial, we use <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>
+      denote a function &ldquo;within&rdquo; the function <img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>
+      that takes in <img src="tutorial-43.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0205818181818181em; margin-right: -0.0373333333333334em; margin-top: -0.0131151515151515em; vertical-align: -0.289163636363636em; height: 1.02964848484848em"></img> tensors and outputs <img src="tutorial-44.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0205818181818181em; margin-right: -0.0373333333333332em; margin-top: -0.0131151515151515em; vertical-align: -0.289163636363636em; height: 1.02964848484848em"></img> tensors
+    </p>
+    <center>
+      <img src="tutorial-45.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.25420606060606em"></img>
+    </center>
+    <p>
+      Secondly, the outputs of
+      <img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>
+      given its inputs can be computed by running Algorithm 1
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                8. I must admit that the idea of looping through functions is
+                a bit handwavy; the idea I'm trying to convey is just that we
+                want to sequence the execution of these functions in such a
+                way that the inputs they depend on have already been computed.
+                
+              </p></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-8"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-8">8</a></class></sup>
+      :
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+            <strong>Algorithm <class style="font-style: normal">1</class></strong>
+          </p><p>
+            Forward pass through a computation graph
+          </p></font></td>
+        </tr><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+            <b>Input:</b> computation graph, (<span class="no-breaks"><img src="tutorial-46.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.201115151515152em; height: 1.17313939393939em"></img>)</span>
+          </p><p>
+            
+          </p><p>
+            <b>For</b> <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> in functions inside the
+            computational graph (in a forward fashion):
+          </p><p>
+            
+          </p><p>
+            <span style="margin-left: 2em"></span><img src="tutorial-47.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.25420606060606em"></img>
+          </p><p>
+            
+          </p><p>
+            <b>Output:</b> (<span class="no-breaks"><img src="tutorial-48.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.201115151515152em; height: 1.17313939393939em"></img>)</span>
+          </p></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <h2 id="auto-3"><a id="sec:fm"></a>3<span style="margin-left: 1em"></span>Forward-mode automatic
+    differentiation<span style="margin-left: 1em"></span></h2>
+    <p>
+      In this section, we discuss forward-mode AD for computing the full
+      &ldquo;Jacobian&rdquo; and a &ldquo;Jacobian-vector product&rdquo;
+      (&ldquo;JVP&rdquo;) of a computation graph.
+    </p>
+    <h3 id="auto-4">3.1<span style="margin-left: 1em"></span>Understanding <tt class="verbatim">jac.jacfwd</tt><span
+    style="margin-left: 1em"></span></h3>
+    <p>
+      If we apply Equation <a href="#eq:tensor-chain-sum">4</a> to some <img src="tutorial-49.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>
+      inside the computation graph <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>,</span>
+      we see that
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-50.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121224em; margin-top: -0.0141575757575758em; vertical-align: -1.21178181818182em; height: 3.03677575757576em" id="eq:tensor-chain-sum-rule-f"></img></td>
+        <td align="right">(5)</td>
+      </tr>
+    </table>
+    <p>
+      This relationship shows that, if we want to compute the partial
+      derivatives of <span class="no-breaks"><img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>'s</span> output
+      variables with respect to <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      input variables, we must first know the partial derivatives of <span
+      class="no-breaks"><img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>'s</span> input variables with respsect to
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span> input variables. As a
+      result, it inspires a &ldquo;forward-style&rdquo; algorithm (i.e., the
+      algorithm first goes through variables closer to <span class="no-breaks"><img src="tutorial-31.png"
+      style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span> input variables) for computing the partial
+      derivatives of <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span> output
+      variables with 
+    </p>
+    <p>
+      respect to <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span> input variables
+      (Algorithm <a href="#algo:fmad">2</a>)
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+            <strong>Algorithm <class style="font-style: normal">2</class></strong>
+          </p><p>
+            <a id="algo:fmad"></a>
+          </p></font></td>
+        </tr><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+            <b>Input:</b> computation graph, <img src="tutorial-51.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+          </p><p>
+            
+          </p><p>
+            <b>Initialize</b> <img src="tutorial-52.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+          </p><p>
+            
+          </p><p>
+            <b>For</b> <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> in functions inside the
+            computational graph (in a forward fashion):
+          </p><p>
+            
+          </p><p>
+            <span style="margin-left: 2em"></span><img src="tutorial-47.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.25420606060606em"></img>
+          </p><p>
+            
+          </p><p>
+            <span style="margin-left: 2em"></span><img src="tutorial-53.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.569284848484848em; height: 1.82572121212121em"></img>
+          </p><p>
+            
+          </p><p>
+            <b>Output:</b> <img src="tutorial-54.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+          </p></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      
+    </p>
+    <p>
+      Note that we need to have a forward pass within Algorithm <a href="#algo:fmad">2</a>
+      (line 4) because we need to evaluate each <img src="tutorial-56.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img> at the
+      actual value of <span class="no-breaks"><img src="tutorial-57.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span> Despite the
+      correctness of Algorithm 2, it does not represent how JAX implements <tt
+      class="verbatim">jax.jacfwd</tt>. In Section <a href="#sec:fwdjvp">3.2</a>, we derive the
+      algorithm for computing the &ldquo;JVP&rdquo; and show how it can be
+      leveraged to compute the full &ldquo;Jacobian&rdquo;.
+    </p>
+    <h3 id="auto-5"><a id="sec:fwdjvp"></a>3.2<span style="margin-left: 1em"></span>Understanding <tt class="verbatim">jac.jvp</tt><span
+    style="margin-left: 1em"></span></h3>
+    <p>
+      In certain scenarios, one doesn't need the full &ldquo;Jacobian&rdquo;,
+      which contains the partial derivative of every output variable with
+      respect to every input variable. Instead, one might only want the
+      partial derivatives of all output variables with respect to one specific
+      input variable, i.e., a single scalar entry within the entire <span
+      class="no-breaks"><img src="tutorial-51.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>.</span> Denoting this scalar input
+      variable by <span class="no-breaks"><img src="tutorial-58.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0154181818181818em; margin-right: -0.0124121212121215em; margin-top: -0.0131151515151515em; vertical-align: -0.0404363636363636em; height: 0.775757575757576em"></img>,</span> we organize the
+      desired partial derivatives as
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-59.png" style="margin-left: 0em; margin-bottom: -0.0103757575757577em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -1.29292121212121em; height: 3.12785454545455em" id="exp:desired-pd"></img></td>
+        <td align="right">(6)</td>
+      </tr>
+    </table>
+    <p>
+      where <img src="tutorial-60.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img> has the same shape as <span class="no-breaks"><img
+      src="tutorial-36.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121213em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span> 
+    </p>
+    <p>
+      We then make the important yet potentially non-trivial observation: we
+      can obtain the quantity above using the following computation:
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-61.png" style="margin-left: 0em; margin-bottom: -0.0103757575757577em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -1.29292121212121em; height: 3.12785454545455em" id="exp:jvp"></img></td>
+        <td align="right">(7)</td>
+      </tr>
+    </table>
+    <p>
+      where (a)
+      <img src="tutorial-62.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.999369696969697em"></img>
+      have the same shape as
+      <img src="tutorial-37.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>
+      and (b) every entry of
+      <img src="tutorial-63.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+      is zero
+      <i>except</i>
+      the entry corresponding to
+      <span class="no-breaks"><img src="tutorial-64.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0263272727272728em; vertical-align: 0em; height: 0.496484848484848em"></img>,</span>
+      the quantity we want to differentiate with respect to. This computation
+      is called the &ldquo;JVP&rdquo;
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                9. To see where the name &ldquo;Jacobian-vector product&rdquo;
+                comes from, consider the case in which a computation graph
+                takes a single vector input <img src="tutorial-65.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img> and
+                outputs another vector <span class="no-breaks"><img src="tutorial-66.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0839272727272726em; margin-top: -0.0119757575757576em; vertical-align: -0.201115151515152em; height: 0.974472727272727em"></img>.</span>
+                In this case, the partial derivatives of all output variables
+                with respect to a single input variable can be computed using
+              </p><center>
+                <img src="tutorial-67.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181818em; margin-right: -0.0124121212121207em; margin-top: -0.0119757575757575em; vertical-align: -0.820557575757576em; height: 2.21090909090909em"></img>
+              </center><p>
+                which is, unanimously, the product of a Jacobian and a vector.
+                Clearly, this naming convention was kept even when engineers
+                and researchers generalized the input and output of a
+                computation graph to be more than one and/or
+                higher-dimensional.
+              </p></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-9"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-9">9</a></class></sup>
+      . Let's verify that this is indeed what JAX's
+      <tt class="verbatim">jax.jvp</tt>
+      computes:
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+# let us choose x to be the (1, 2) entry of X1
+# below are three ways of obtaining the same answer in jax
+
+# first way
+# indexing the result of jacfwd (the jacobian)
+
+jac = jax.jacfwd(g, argnums=(0, 1))(X1, X2)
+jvp_via_indexing = (jac[0][0][:, :, 1, 2], jac[1][0][:, :, 1, 2])
+
+# second way
+# contracting the jacobian with V1 and V2
+
+V1, V2 = np.zeros(X1.shape), np.zeros(X2.shape)
+V1 = V1.at[1, 2].set(1)
+
+def contract(A, B):
+    return np.einsum(&quot;ijkl,kl-&gt;ij&quot;, A, B)
+
+jvp_after_jac_is_computed = (
+    contract(jac[0][0], V1) + contract(jac[0][1], V2), 
+    contract(jac[1][0], V1) + contract(jac[1][1], V2)
+)
+
+# third way
+# use jvp in jax
+
+primals, tangents = jax.jvp(g, (X1, X2), (V1, V2))
+
+print(np.allclose(jvp_via_indexing[0], tangents[0]))  # true
+print(np.allclose(jvp_via_indexing[1], tangents[1]))  # true
+print(np.allclose(jvp_after_jac_is_computed[0], tangents[0]))  # true
+print(np.allclose(jvp_after_jac_is_computed[1], tangents[1]))  # true</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      While we could first compute the &ldquo;Jacobian&rdquo; and then
+      contract the matrices it contains with <img src="tutorial-68.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.201115151515152em; height: 1.17313939393939em"></img> (the
+      second way in the code example above), it turns out to be much more
+      efficient to compute the &ldquo;JVP&rdquo; directly. Here's how this can
+      be accomplished. Contract both sides of Equation <a href="#eq:tensor-chain-sum-rule-f">5</a> with
+      <span class="no-breaks"><img src="tutorial-62.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.999369696969697em"></img>,</span> obtain
+    </p>
+    <center>
+      <img src="tutorial-69.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0103757575757577em; margin-right: -0.0124121212121189em; margin-top: -0.0144969696969697em; vertical-align: -1.3185696969697em; height: 3.12785454545455em"></img>
+    </center>
+    <p>
+      Since tensor contraction is distributive and commutative, we have
+    </p>
+    <center>
+      <img src="tutorial-70.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0103757575757575em; margin-right: -0.0124121212121189em; margin-top: -0.0144969696969697em; vertical-align: -2.9864em; height: 6.46351515151515em"></img>
+    </center>
+    <p>
+      Finally, summing across <span class="no-breaks"><img src="tutorial-17.png" style="margin-left: -0.0248242424242424em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: -0.201115151515152em; height: 0.91849696969697em"></img>,</span> we
+      have
+    </p>
+    <center>
+      <img src="tutorial-71.png" style="margin-left: -0.0124121212121212em; margin-bottom: 0.0769939393939394em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -2.81229090909091em; height: 4.55985454545455em"></img>
+    </center>
+    <p>
+      where we have defined two new quantities
+      <img src="tutorial-72.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121215em; margin-top: -0.0167272727272727em; vertical-align: 0em; height: 0.981478787878788em"></img>
+      and
+      <span class="no-breaks"><img src="tutorial-73.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.0167272727272727em; vertical-align: 0em; height: 0.981478787878788em"></img>.</span>
+      Again, using another &ldquo;forward-style&rdquo; algorithm (Algorithm
+      <a href="#algo:jvp">3</a>
+      ), we can eventually obtain
+      <span class="no-breaks"><img src="tutorial-74.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121213em; margin-top: -0.0167272727272727em; vertical-align: 0em; height: 0.981478787878788em"></img>,</span>
+      which is exactly what we wanted at the beginning of this sub-section
+      (Expression
+      <a href="#exp:desired-pd">6</a>
+      and
+      <a href="#exp:jvp">7</a>
+      ).
+      <div class="float">
+        <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+          <font color="black"><table style="width: 100%">
+            <tbody><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <strong>Algorithm <class style="font-style: normal">3</class></strong>
+              </p><p>
+                <b>Reverse-mode automatic differentiation for a
+                &ldquo;Jacobian-vector product&rdquo;</b><a id="algo:jvp"></a>
+              </p></font></td>
+            </tr><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <b>Input:</b> computation graph, primals <span class="no-breaks"><img
+                src="tutorial-51.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>,</span> tangents <img src="tutorial-63.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+              </p><p>
+                <span style="margin-left: 3em"></span>
+              </p><p>
+                Initialize <img src="tutorial-75.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.0167272727272727em; vertical-align: -0.258569696969697em; height: 1.24213333333333em"></img>
+              </p><p>
+                
+              </p><p>
+                <b>For</b> <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> in functions inside the
+                computational graph (in an appropriate order):
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 2em"></span><img src="tutorial-76.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.25420606060606em"></img>
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 2em"></span>For <img src="tutorial-15.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: 0em; height: 0.71990303030303em"></img> in <span
+                class="no-breaks"><img src="tutorial-77.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0888242424242423em; margin-top: -0.0131151515151515em; vertical-align: -0.201115151515152em; height: 0.930909090909091em"></img>:</span>
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 4em"></span><img src="tutorial-78.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.569284848484848em; height: 1.82572121212121em"></img><span style="margin-left: 1em"></span>#
+                line 6
+              </p><p>
+                
+              </p><p>
+                <b>Output:</b> <img src="tutorial-79.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+              </p></font></td>
+            </tr></tbody>
+          </table></font>
+        </div>
+      </div>
+    </p>
+    <p>
+      TODO: Obviously, not strictly required to ones and zeros (?),
+      directional derivative and so on
+    </p>
+    <p>
+      TODO: explain the words tangent and primals in the pushforward context
+    </p>
+    <h3 id="auto-6">3.3<span style="margin-left: 1em"></span>How JAX uses <tt class="verbatim">jac.jvp</tt> to
+    compute the &ldquo;Jacobian&rdquo; ?<span style="margin-left: 1em"></span></h3>
+    <p>
+      Each time <tt class="verbatim">jac.jvp</tt> allows us to compute the partial
+      derivatives of all output variables with respect to a single input
+      variable. This suggests that, we can simply call <tt class="verbatim">jac.jvp</tt>
+      once for ever input variable, and asemble the results from all the calls
+      to the Jacobian. Indeed, this is what happens under the hood in JAX and
+      here's how we might do it explicitly:
+    </p>
+    <h3 id="auto-7">3.4<span style="margin-left: 1em"></span>Defining custom JVP rules / pushforward
+    rules via <tt class="verbatim">jax.custom_jvp</tt> and <tt class="verbatim">f.defjvp</tt><span
+    style="margin-left: 1em"></span></h3>
+    <p>
+      Built-in functions of JAX certainly can be differentiated through, but
+      what happens when incorporate code from another package into a
+      computation graph. Can we still compute the JVP using JAX? Let's try it
+      out
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+# previously, this was g
+# def g(X1, X2):
+#    Y1 = X1 @ X2
+#    Y2 = X * X
+#    return Y1, Y2
+    
+# suppose for some reason which we do not want to use matmul in jax but rather a custom matmul function (which uses numpy)
+# (jax.pure_callback is the way for including non-jax code in jax workflow)
+
+def matmul(A, B):
+    result_shape = jax.core.ShapedArray((A.shape[0], B.shape[1]), A.dtype)
+    return jax.pure_callback(npy.matmul, result_shape, A, B)
+
+def g2(A, B):
+    C = matmul(A, B)
+    D = A * A
+    return C, D</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      If we try to naively use jax.jvp, we get into trouble
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+primals, tangents = jax.jvp(g2, (X1, X2), (V1, V2))
+# ValueError: Pure callbacks do not support JVP. Please use &lsquo;jax.custom_jvp&lsquo; to use callbacks while taking gradients.</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      Why is this? Notice line 6 in Algorithm 3 is called the JVP rule for
+      <span class="no-breaks"><img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>,</span> we must know how to do this
+      for <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> yet doesn't know this. Defining the custom
+      JVP rule (derived in Section XX):
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+@jax.custom_jvp
+def matmul(A, B):
+    result_shape = jax.core.ShapedArray((A.shape[0], B.shape[1]), A.dtype)
+    return jax.pure_callback(npy.matmul, result_shape, A, B)
+
+@matmul.defjvp
+def matmul_jvp(primals, tangents):
+    A, B = primals
+    A_dot, B_dot = tangents
+    primal_out = matmul(A, B)
+    tangent_out = matmul(A_dot, B) + matmul(A, B_dot)
+    return primal_out, tangent_out</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      Now jax.jvp does work and give the correct answer
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+_, tangents_from_g = jax.jvp(g, (X1, X2), (V1, V2))
+_, tangents_from_g2 = jax.jvp(g2, (X1, X2), (V1, V2))
+print(np.allclose(tangents_from_g[0], tangents_from_g2[0]))  # True
+print(np.allclose(tangents_from_g[1], tangents_from_g2[1]))  # True</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      Of course, there are also other reasons why we might want to define the
+      JVP rule by ourselves. Another use case is when functions are defined
+      implicitly. I really hope to include an example of this.
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+# TODO</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      TODO: mention how sometimes defining the JVP rule also allows you to do
+      reverse mode (maybe give some examples after the next section?
+    </p>
+    <h2 id="auto-8"><a id="sec:rm"></a>4<span style="margin-left: 1em"></span>Reverse-mode automatic
+    differentiation<span style="margin-left: 1em"></span></h2>
+    <p>
+      In this section, we discuss reverse-mode AD for computing the full
+      &ldquo;Jacobian&rdquo; and a &ldquo;vector-Jacobian product&rdquo;
+      (&ldquo;VJP&rdquo;) of a computation graph.
+    </p>
+    <h3 id="auto-9">4.1<span style="margin-left: 1em"></span>Computing the full
+    &ldquo;Jacobian&rdquo;<span style="margin-left: 1em"></span></h3>
+    <p>
+      If we, again, apply Equation <a href="#eq:tensor-chain-sum">4</a> to some <img src="tutorial-49.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>
+      inside the computation graph <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>,</span>
+      we also see that
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-80.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121224em; margin-top: -0.0141575757575758em; vertical-align: -1.21178181818182em; height: 3.03677575757576em" id="eq:tensor-chain-sum-rule-f-2"></img></td>
+        <td align="right">(8)</td>
+      </tr>
+    </table>
+    <p>
+      This relationship shows that, if we want to compute the partial
+      derivatives of
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      output variables with respect to
+      <span class="no-breaks"><img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>'s</span>
+      input variables, we must first know the partial derivatives of
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      output variables with respsect to
+      <span class="no-breaks"><img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img>'s</span>
+      output variables. As a result, it inspires a
+      &ldquo;reverse-style&rdquo; algorithm (i.e., the algorithm first goes
+      through variables closer to
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      output variables) for computing the partial derivatives of
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      output variables with respect to
+      <span class="no-breaks"><img src="tutorial-31.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121213em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>'s</span>
+      input variables (Algorithm
+      <a href="#algo:rmad">4</a>
+      ).
+      <div class="float">
+        <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+          <font color="black"><table style="width: 100%">
+            <tbody><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <strong>Algorithm <class style="font-style: normal">4</class></strong>
+              </p><p>
+                <b>Reverse-mode automatic differentiation for computing the
+                &ldquo;Jacobian&rdquo;</b><a id="algo:rmad"></a>
+              </p></font></td>
+            </tr><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <b>Input:</b> computation graph, <img src="tutorial-51.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+              </p><p>
+                
+              </p><p>
+                <b>Initialize</b> <img src="tutorial-81.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+              </p><p>
+                
+              </p><p>
+                Forward pass
+              </p><p>
+                
+              </p><p>
+                <b>For</b> <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> in functions inside the
+                computational graph (in a backward fashion):
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 2em"></span><img src="tutorial-82.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.569284848484848em; height: 1.82572121212121em"></img><span style="margin-left: 1em"></span>#
+                need stored values from forward pass
+              </p><p>
+                
+              </p><p>
+                <b>Output:</b> <img src="tutorial-54.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+              </p></font></td>
+            </tr></tbody>
+          </table></font>
+        </div>
+      </div>
+    </p>
+    <p>
+      Note that we need to perform a forward pass and store all intermediate
+      values within Algorithm <a href="#algo:rmad">4</a> before everything because we need
+      to evaluate each <img src="tutorial-83.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img> at the actual value of <span
+      class="no-breaks"><img src="tutorial-84.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span> Despite the correctness of
+      Algorithm <a href="#algo:rmad">4</a>, it does not represent how JAX implements <tt
+      class="verbatim">jax.jacrev</tt>. In Section <a href="#sec:jaxvjp">4.2</a>, we derive the
+      algorithm for computing the &ldquo;VJP&rdquo; and, in Section <a href="#sec:jaxjacrev">4.3</a>
+      show how it can be leveraged to compute the full &ldquo;Jacobian&rdquo;.
+    </p>
+    <h3 id="auto-10"><a id="sec:jaxvjp"></a>4.2<span style="margin-left: 1em"></span>Understanding <tt class="verbatim">jax.vjp</tt><span
+    style="margin-left: 1em"></span></h3>
+    <p>
+      Instead of the full &ldquo;Jacobian&rdquo;, one might only want the
+      partial derivatives of one specific output variable (i.e., a single
+      scalar entry within the entire <span class="no-breaks"><img src="tutorial-85.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>)</span>
+      with respect to all input variables. Denoting this scalar output
+      variable by <span class="no-breaks"><img src="tutorial-86.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121211em; margin-top: -0.0131151515151515em; vertical-align: -0.201115151515152em; height: 0.943321212121212em"></img>,</span> we organize the
+      desired partial derivatives as
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-87.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.0144969696969697em; vertical-align: -0.982618181818182em; height: 2.50724848484849em"></img></td>
+        <td align="right">(9)</td>
+      </tr>
+    </table>
+    <p>
+      where <img src="tutorial-88.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img> has the same shape as <span class="no-breaks"><img
+      src="tutorial-89.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span> It turns out that we can obtain the quantity
+      above using the following computation:
+    </p>
+    <table width="100%">
+      <tr>
+        <td width="100%" align="center"><img src="tutorial-90.png" style="margin-left: 0em; margin-bottom: -0.0103757575757577em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -1.29292121212121em; height: 3.12785454545455em"></img></td>
+        <td align="right">(10)</td>
+      </tr>
+    </table>
+    <p>
+      where (a)
+      <img src="tutorial-91.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.999369696969697em"></img>
+      have the same shape as
+      <img src="tutorial-37.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>
+      and (b) every entry of
+      <img src="tutorial-92.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+      is zero
+      <i>except</i>
+      the entry corresponding to
+      <span class="no-breaks"><img src="tutorial-93.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0124121212121212em; margin-top: -0.0263272727272728em; vertical-align: -0.201115151515152em; height: 0.695078787878788em"></img>.</span>
+      This computation is called the &ldquo;VJP&rdquo;
+      <div class="footnote">
+        <font style="font-size: 77.1%"><div align="justify">
+          <div style="margin-left: 0px">
+            <div style="margin-right: 0px">
+              <class style="font-style: normal"><p>
+                10. To see where the name &ldquo;vector-Jacobian
+                product&rdquo; comes from, consider the case in which a
+                computation graph takes a single vector input <img src="tutorial-65.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0119757575757576em; vertical-align: 0em; height: 0.775878787878788em"></img>
+                and outputs another vector <span class="no-breaks"><img src="tutorial-66.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0839272727272726em; margin-top: -0.0119757575757576em; vertical-align: -0.201115151515152em; height: 0.974472727272727em"></img>.</span>
+                In this case, the partial derivatives of a single output
+                variable with respect to all input variables can be computed
+                using
+              </p><center>
+                <img src="tutorial-94.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121224em; margin-top: -0.0119757575757575em; vertical-align: -0.672169696969697em; height: 2.08113939393939em"></img>
+              </center><p>
+                which is, unanimously, the product of a vector (though
+                transposed) and a Jacobian. Clearly, this naming convention
+                was kept even when engineers and researchers generalized the
+                input and output of a computation graph to be more sdthan one
+                and/or higher-dimensional.
+              </p></class>
+            </div>
+          </div>
+        </div></font>
+      </div>
+      <span style="margin-left: 0em"></span>
+      <a id="footnr-10"></a>
+      <sup><class style="font-style: normal"><a href="#footnote-10">10</a></class></sup>
+      . Let's verify that this is indeed what JAX's
+      <tt class="verbatim">jax.vjp</tt>
+      computes:
+    </p>
+    <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+      <font color="black"><table style="width: 100%">
+        <tbody><tr>
+          <td style="padding-top: 0.5em; padding-bottom: 0.5em; background-color: #00000000; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid"><font color="black"><pre class="verbatim" xml:space="preserve">
+# make note of computation shapes here
+
+# let us choose y to be the (1, 2) entry of Y1
+# below are three ways of obtaining the same answer in jax
+
+# first way
+# indexing the result of jacrev (the jacobian)
+
+jac = jax.jacrev(g, argnums=(0, 1))(X1, X2)
+vjp_via_indexing = (jac[0][0][1, 2, :, :], jac[0][1][1, 2, :, :])
+
+# second way
+# contracting the jacobian with W1 and W2
+
+W1, W2 = np.zeros(Y1.shape), np.zeros(Y2.shape)
+W1 = W1.at[1, 2].set(1)
+
+def contract(A, B):
+    return np.einsum(&quot;ij,ijkl-&gt;kl&quot;, A, B)
+
+vjp_after_jac_is_computed = (
+    contract(W1, jac[0][0]) + contract(W2, jac[1][0]), 
+    contract(W1, jac[0][1]) + contract(W2, jac[1][1])
+)
+
+# third way
+# use vjp in jax
+
+primals, vjpfun = jax.vjp(g, X1, X2)
+cotangents = vjpfun((W1, W2))
+
+print(np.allclose(vjp_via_indexing[0], cotangents[0]))  # true
+print(np.allclose(vjp_via_indexing[1], cotangents[1]))  # true
+print(np.allclose(vjp_after_jac_is_computed[0], cotangents[0]))  # true
+print(np.allclose(vjp_after_jac_is_computed[1], cotangents[1]))  # true</pre></font></td>
+        </tr></tbody>
+      </table></font>
+    </div>
+    <p>
+      While we could first compute the &ldquo;Jacobian&rdquo; and then
+      contract the matrices it contains with <img src="tutorial-95.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.201115151515152em; height: 1.17313939393939em"></img> (the
+      second way in the code example above), it turns out to be much more
+      efficient to compute the &ldquo;VJP&rdquo; directly. Here's how this can
+      be accomplished. Pre-Contract both sides of Equation (should be 8 here)
+      with <span class="no-breaks"><img src="tutorial-96.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.999369696969697em"></img>,</span> obtain
+    </p>
+    <center>
+      <img src="tutorial-97.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0103757575757577em; margin-right: 0em; margin-top: -0.0144969696969697em; vertical-align: -1.29292121212121em; height: 3.12785454545455em"></img>
+    </center>
+    <p>
+      Since tensor contraction is distributive and commutative, we have
+    </p>
+    <center>
+      <img src="tutorial-98.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0103757575757575em; margin-right: -0.0124121212121189em; margin-top: -0.0144969696969697em; vertical-align: -2.9864em; height: 6.46351515151515em"></img>
+    </center>
+    <p>
+      Finally, summing across <span class="no-breaks"><img src="tutorial-15.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: 0em; height: 0.71990303030303em"></img>,</span> we
+      have
+    </p>
+    <center>
+      <img src="tutorial-99.png" style="margin-left: -0.0348121212121212em; margin-bottom: 0.0769939393939394em; margin-right: -0.0124121212121153em; margin-top: -0.0144969696969697em; vertical-align: -2.81229090909091em; height: 4.55985454545455em"></img>
+    </center>
+    <p>
+      where we have defined two new quantities
+      <img src="tutorial-100.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121211em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>
+      and
+      <span class="no-breaks"><img src="tutorial-101.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>.</span>
+      Using another &ldquo;reverse-style&rdquo; algorithm (Algorithm
+      <a href="#algo:jvp">3</a>
+      ), we can eventually obtain
+      <span class="no-breaks"><img src="tutorial-102.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0124121212121212em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: 0em; height: 0.974545454545455em"></img>,</span>
+      which is exactly what we wanted at the beginning of this sub-section
+      (Expression
+      <a href="#exp:desired-pd">6</a>
+      and
+      <a href="#exp:jvp">7</a>
+      ).
+      <div class="float">
+        <div class="compact-block" style="margin-top: 1em; margin-bottom: 1em; text-indent: 0em">
+          <font color="black"><table style="width: 100%">
+            <tbody><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <strong>Algorithm <class style="font-style: normal">5</class></strong>
+              </p><p>
+                <b>Reverse-mode automatic differentiation for a
+                &ldquo;vector-Jacobian product&rdquo;</b><a id="algo:vjp"></a>
+              </p></font></td>
+            </tr><tr>
+              <td style="padding-top: 0.5em; padding-bottom: 0.5em; border-left: 0.5px solid; border-right: 0.5px solid; border-top: 0.5px solid; border-bottom: 0.5px solid; background-color: #00000000"><font color="black"><p>
+                <b>Input:</b> computation graph, primals <span class="no-breaks"><img
+                src="tutorial-51.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>,</span> cotangents <img src="tutorial-92.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121215em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+              </p><p>
+                <span style="margin-left: 3em"></span>
+              </p><p>
+                Initialize <img src="tutorial-103.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121224em; margin-top: -0.015539393939394em; vertical-align: -0.258569696969697em; height: 1.2352em"></img>
+              </p><p>
+                
+              </p><p>
+                Forward pass
+              </p><p>
+                
+              </p><p>
+                <b>For</b> <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> in functions inside the
+                computational graph (in an appropriate order):
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 2em"></span>For <img src="tutorial-15.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0129212121212121em; vertical-align: 0em; height: 0.71990303030303em"></img> in <span
+                class="no-breaks"><img src="tutorial-77.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0888242424242423em; margin-top: -0.0131151515151515em; vertical-align: -0.201115151515152em; height: 0.930909090909091em"></img>:</span>
+              </p><p>
+                
+              </p><p>
+                <span style="margin-left: 4em"></span><img src="tutorial-104.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.569284848484848em; height: 1.82572121212121em"></img>
+              </p><p>
+                
+              </p><p>
+                <b>Output:</b> <img src="tutorial-79.png" style="margin-left: 0em; margin-bottom: -0.0103757575757576em; margin-right: 0em; margin-top: -0.015539393939394em; vertical-align: -0.672315151515152em; height: 1.91430303030303em"></img>
+              </p></font></td>
+            </tr></tbody>
+          </table></font>
+        </div>
+      </div>
+    </p>
+    <p>
+      TODO: Obviously, not strictly required to ones and zeros (?),
+      directional derivative and so on
+    </p>
+    <p>
+      TODO: explain the words tangent and primals in the pushforward context
+    </p>
+    <h3 id="auto-11"><a id="sec:jaxjacrev"></a>4.3<span style="margin-left: 1em"></span>Understanding <tt class="verbatim">jax.jacrev</tt><span
+    style="margin-left: 1em"></span></h3>
+    <p>
+      Each time <tt class="verbatim">jac.vjp</tt> allows us to compute the partial
+      derivatives of a single output variable with respect to all input
+      variables. This suggests that, we can simply call <tt class="verbatim">jac.vjp</tt>
+      once for every output variable, and asemble the results from all the
+      calls to the Jacobian. Indeed, this is what happens under the hood in
+      JAX and here's how we might do it explicitly:
+    </p>
+    <h2 id="auto-12">5<span style="margin-left: 1em"></span>Comparing forward mode and reverse mode<span
+    style="margin-left: 1em"></span></h2>
+    <p>
+      
+    </p>
+    <h2 id="auto-13">6<span style="margin-left: 1em"></span>Derivations of some JVP / pushforward
+    rules<span style="margin-left: 1em"></span></h2>
+    <h3 id="auto-14">6.1<span style="margin-left: 1em"></span>Scalar addition<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-15">6.2<span style="margin-left: 1em"></span>Scalar multiplication<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-16">6.3<span style="margin-left: 1em"></span>Scalar sine<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-17">6.4<span style="margin-left: 1em"></span>Broadcasted function<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-18">6.5<span style="margin-left: 1em"></span>Matrix-vector product<span style="margin-left: 1em"></span></h3>
+    <p>
+      How can I adapt what I derived, to multiple inputs and outputs? Or when
+      inputs and outputs are not vectors?
+    </p>
+    <center>
+      <img src="tutorial-105.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0205818181818181em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.289163636363636em; height: 1.27187878787879em"></img>
+    </center>
+    <p>
+      First case, multiple inputs:
+    </p>
+    <center>
+      <img src="tutorial-105.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0205818181818181em; margin-right: -0.0124121212121207em; margin-top: -0.015539393939394em; vertical-align: -0.289163636363636em; height: 1.27187878787879em"></img>
+    </center>
+    <p>
+      We can simply break the Jacobian vector products into multiple pieces?
+      Horizontal slices
+    </p>
+    <p>
+      Second case, matrice inputs and matrix outputs
+    </p>
+    <h3 id="auto-19">6.6<span style="margin-left: 1em"></span>Scalar root-finding<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-20">6.7<span style="margin-left: 1em"></span>Matrix-matrix product<span style="margin-left: 1em"></span></h3>
+    <p style="margin-top: 1em">
+      <strong>Theorem <class style="font-style: normal">2</class>. </strong><i>(JVP pushforward
+      rule for matrix-matrix multiplication)</i>
+    </p>
+    <p>
+      <i>Let function <img src="tutorial-106.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> represent matrix-matrix
+      multiplication</i>
+    </p>
+    <p>
+      <i><center>
+        <img src="tutorial-107.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.0124363636363636em; vertical-align: -0.258569696969697em; height: 1.06123636363636em"></img>
+      </center></i>
+    </p>
+    <p>
+      <i>where <img src="tutorial-108.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0124121212121224em; margin-top: 0.0572121212121212em; vertical-align: -0.201115151515152em; height: 0.972993939393939em"></img></i>
+    </p>
+    <p style="margin-bottom: 1em">
+      <i></i>
+    </p>
+    <p>
+      &ldquo;JVP&rdquo; rule:
+    </p>
+    <center>
+      <img src="tutorial-109.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00518787878787874em; margin-right: -0.0124121212121224em; margin-top: -0.0326545454545455em; vertical-align: -2.11081212121212em; height: 3.48761212121212em"></img>
+    </center>
+    <center>
+      <img src="tutorial-110.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181819em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969692em; vertical-align: -7.85575757575758em; height: 16.2104484848485em"></img>
+    </center>
+    <p>
+      Therefore
+    </p>
+    <center>
+      <img src="tutorial-111.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0131151515151515em; margin-right: -0.0124121212121215em; margin-top: -0.0167272727272727em; vertical-align: -0.0861818181818182em; height: 1.06836363636364em"></img>
+    </center>
+    <h3 id="auto-21">6.8<span style="margin-left: 1em"></span>L2 loss<span style="margin-left: 1em"></span></h3>
+    <h3 id="auto-22">6.9<span style="margin-left: 1em"></span>Linear system<span style="margin-left: 1em"></span></h3>
+    <p>
+      Let function <img src="tutorial-42.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0223030303030303em; margin-right: -0.0769939393939394em; margin-top: -0.0264484848484848em; vertical-align: -0.201115151515152em; height: 0.968145454545455em"></img> represent matrix-matrix
+      multiplication
+    </p>
+    <center>
+      <img src="tutorial-112.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0144969696969697em; margin-right: -0.0124121212121207em; margin-top: -0.0186424242424242em; vertical-align: -0.258569696969697em; height: 1.06744242424242em"></img>
+    </center>
+    <p>
+      <img src="tutorial-113.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.00989090909090909em; margin-right: -0.0337454545454552em; margin-top: -0.0141575757575758em; vertical-align: -0.201115151515152em; height: 1.09090909090909em"></img>
+    </p>
+    <center>
+      <img src="tutorial-114.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0372363636363636em; margin-right: -0.0124121212121207em; margin-top: -0.0326545454545455em; vertical-align: -0.672169696969697em; height: 2.08101818181818em"></img>
+    </center>
+    <p>
+      Implicit function
+    </p>
+    <p>
+      
+    </p>
+    <center>
+      <img src="tutorial-115.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0186181818181814em; margin-right: -0.0124121212121224em; margin-top: -0.0144969696969697em; vertical-align: -3.484em; height: 7.46693333333333em"></img>
+    </center>
+    <p>
+      How does a specific <img src="tutorial-64.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0263272727272728em; vertical-align: 0em; height: 0.496484848484848em"></img> element relate to a specific
+      <img src="tutorial-116.png" style="margin-left: -0.0124121212121212em; margin-bottom: -0.0248242424242424em; margin-right: -0.0124121212121212em; margin-top: -0.0140363636363636em; vertical-align: 0em; height: 0.757139393939394em"></img> element?
+    </p>
+    <center>
+      <img src="tutorial-117.png" style="margin-left: -0.0124121212121212em; margin-bottom: 0.233672727272728em; margin-right: -0.0124121212121189em; margin-top: 0.0248969696969699em; vertical-align: -10.0021575757576em; height: 20.2115878787879em"></img>
+    </center>
+    <p>
+      which is also a linear system!
+    </p>
+    <h3 id="auto-23">6.10<span style="margin-left: 1em"></span>Nonlinear system solve<span style="margin-left: 1em"></span></h3>
+    <p>
+      
+    </p>
+    <h3 id="auto-24">6.11<span style="margin-left: 1em"></span>Neural ODE<span style="margin-left: 1em"></span></h3>
+    <p>
+      
+    </p>
+    <h3 id="auto-25">6.12<span style="margin-left: 1em"></span>Softmax<span style="margin-left: 1em"></span></h3>
+    <p>
+      
+    </p>
+    <p>
+      
+    </p>
+  </body>
+</html>

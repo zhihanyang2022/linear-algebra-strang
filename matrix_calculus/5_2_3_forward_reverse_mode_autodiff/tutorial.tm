@@ -1,4 +1,4 @@
-<TeXmacs|2.1.1>
+<TeXmacs|2.1.4>
 
 <style|<tuple|generic|framed-program>>
 
@@ -59,6 +59,8 @@
     Rather, it gives the reader a mental model of how common JAX's functions
     work under the hood and relate to other. Prepare the fully unlease the
     potential JAX for machine learning research.
+
+    Contrary to machine learning, which usually just requires VJP
   </abstract>>
 
   <\table-of-contents|toc>
@@ -66,16 +68,16 @@
     chain rule> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-1><vspace|0.5fn>
 
-    <vspace*|1fn><with|font-series|bold|math-font-series|bold|2<space|2spc>The
-    goal of automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+    <vspace*|1fn><with|font-series|bold|math-font-series|bold|2<space|2spc>A
+    main goal of first-order automatic differentiation>
+    <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-2><vspace|0.5fn>
 
     <vspace*|1fn><with|font-series|bold|math-font-series|bold|3<space|2spc>Forward-mode
     automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-3><vspace|0.5fn>
 
-    <with|par-left|1tab|3.1<space|2spc>Understanding
-    <with|font-family|tt|language|verbatim|jac.jacfwd>
+    <with|par-left|1tab|3.1<space|2spc>Computing the \PJacobian\Q
     <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-4>>
 
@@ -305,41 +307,71 @@
     a<eq-number><label|eq:tensor-chain-sum>>>>>
   </eqnarray*>
 
-  <section|The goal of automatic differentiation>
+  <section|A main goal of first-order automatic differentiation>
 
-  Consider a directed acyclic computational graph that takes in <math|N>
-  tensors and outputs <math|M> tensors (these tensors may be organized in
-  pytrees<\footnote>
-    \PIn JAX, we use the term pytree to refer to a tree-like structure built
-    out of container-like Python objects.\Q
-  </footnote>), with no restriction on the shape of each tensor. This is, of
-  course, a very general setup. We view this graph as a function and we
-  denote it by <math|g>:
+  Consider a directed acyclic computation graph that takes in <math|N>
+  tensors and spits out <math|M> tensors, with no restriction on the shape of
+  each tensor; these tensors may be organized in pytrees<\footnote>
+    JAX uses the term \Ppytree\Q to refer to \Pa tree-like structure built
+    out of container-like Python objects\Q. For example, if <python|A> and
+    <python|B> are two JAX tensors, then <python|[A, {"data": B}]> would be a
+    pytree. Pytrees have very flexible structures and, for the sake of
+    conciseness, we will leave them out in the remainder of this tutorial.
+  </footnote>. This is, of course, a very general setup. We view this graph
+  as a function and denote it by <math|g>:
 
   <\equation*>
     g<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>=<around*|(|Y<rsup|<around*|(|1|)>>,\<ldots\>,Y<rsup|<around*|(|M|)>>|)>.
   </equation*>
 
-  One main goal of automatic differentiation is to obtain the following
-  matrix of tensors:\ 
+  One main<\footnote>
+    By \Pmain\Q, we mean that any AD system should be able to compute the
+    \PJacobian\Q efficiently one way or another.\ 
+  </footnote> goal of first-order AD is to obtain the following matrix of
+  tensors:\ 
 
   <\equation*>
     <text|\PJacobian\Q>=<matrix|<tformat|<table|<row|<cell|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>>|<cell|\<cdots\>>|<cell|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>>>|<row|<cell|\<vdots\>>|\<ddots\>|<cell|\<vdots\>>>|<row|<cell|<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|1|)>>>>|<cell|\<cdots\>>|<cell|<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|N|)>>>>>>>>,
   </equation*>
 
-  where we have put quotes around Jacobian because this matrix above does
-  indeed contain all the required partial derivatives but is not the standard
-  Jacobian of vector-to-vector functions.\ 
+  where <math|<around*|(|i,j|)>>-th entry of this matrix,
+  <math|\<partial\>Y<rsup|<around*|(|i|)>>/\<partial\>X<rsup|<around*|(|j|)>>>,
+  is a tensor whose shape is the concatenation of the shapes of
+  <math|Y<rsup|<around*|(|i|)>>> and <math|X<rsup|<around*|(|j|)>>>. More
+  specifically, if <math|Y<rsup|<around*|(|i|)>>\<in\>\<bbb-R\><rsup|3>> and
+  <math|X<rsup|<around*|(|j|)>>\<in\>\<bbb-R\><rsup|2>>, then
+  <math|\<partial\>Y<rsup|<around*|(|i|)>>/\<partial\>X<rsup|<around*|(|j|)>>>
+  would be in 5 dimensions with<\footnote>
+    We sometimes group the indices to make it more explicit where each group
+    comes from; the following two notations are equivalent in this tutorial:
 
-  Since each tensor could in general have arbitrary shape, in Python, for
-  example, the result would be a double nested tuple. Below, let's try out
-  <verbatim|jax.jacfwd> and <verbatim|jax.jacrev>, two functions in JAX that
-  compute the \PJacobian\Q, to see that this is indeed what happens.
-  <verbatim|jax.jacfwd> and <verbatim|jax.jacrev> computes the \PJacobian\Q
-  via <with|font-shape|italic|forward-mode> (Section <reference|sec:fm>) and
-  <with|font-shape|italic|reverse-mode> automatic differentiation (Section
-  <reference|sec:rm>) respectively. These two modes will be discussed at
-  length in later sections.
+    <\equation*>
+      <around*|(|<frac|\<partial\>Y<rsup|<around*|(|i|)>>|\<partial\>X<rsup|<around*|(|j|)>>>|)><rsub|a
+      b c d e>=<around*|(|<frac|\<partial\>Y<rsup|<around*|(|i|)>>|\<partial\>X<rsup|<around*|(|j|)>>>|)><rsub|<around*|(|a
+      b c|)><around*|(|d e|)>>.
+    </equation*>
+  </footnote>
+
+  <\equation*>
+    <around*|(|<frac|\<partial\>Y<rsup|<around*|(|i|)>>|\<partial\>X<rsup|<around*|(|j|)>>>|)><rsub|a
+    b c d e>=<frac|\<partial\>Y<rsup|<around*|(|i|)>><rsub|a b
+    c>|\<partial\>X<rsup|<around*|(|j|)>><rsub|d e>>.
+  </equation*>
+
+  We have put quotation marks around the word Jacobian because this matrix
+  above does indeed contain all the required partial derivatives but is not
+  the standard Jacobian of vector-to-vector functions. Whenever we use
+  \PJacobian\Q later on, we are referring to this very matrix above.\ 
+
+  Since each input and output tensor could have a different shape, the
+  \PJacobian\Q is best represented as a nested tuple (i.e., a tuple of
+  tuples) of matrices in Python. Below, let's try out <verbatim|jax.jacfwd>
+  and <verbatim|jax.jacrev>, two JAX functions that compute the \PJacobian\Q,
+  to see if this is indeed what they do. <verbatim|jax.jacfwd> and
+  <verbatim|jax.jacrev> computes the \PJacobian\Q via
+  <with|font-shape|italic|forward-mode> (Section <reference|sec:fm>) and
+  <with|font-shape|italic|reverse-mode> AD (Section <reference|sec:rm>)
+  respectively. These two modes will be discussed at length later.
 
   <\python-code>
     def g(X1, X2):
@@ -395,11 +427,11 @@
     3, 4)
   </python-code>
 
-  Before we start later sections, it's also important to note that, in
-  practice, one would define the function <math|g> using some simpler
-  functions or subroutines. Let <math|f> denote a function within the
-  function <math|g> that takes in <math|N<rsub|f>> tensors and outputs
-  <math|M<rsub|f>> tensors
+  Before we start later sections, there are two important things to note.
+  Firstly, in practice, one would define the function <math|g> using some
+  simpler functions. In this tutorial, we use <math|f> denote a function
+  \Pwithin\Q the function <math|g> that takes in <math|N<rsub|f>> tensors and
+  outputs <math|M<rsub|f>> tensors
 
   <\equation*>
     f<around*|(|X<rsup|<around*|(|<with|color|dark
@@ -409,112 +441,118 @@
     green|f>,M<rsub|f>|)>>|)>.
   </equation*>
 
-  The outputs of <math|g> given its inputs can be computed by running
-  Algorithm 1<\footnote>
+  Secondly, the outputs of <math|g> given its inputs can be computed by
+  running Algorithm 1<\footnote>
     I must admit that the idea of looping through functions is a bit
-    handwavy; the idea I'm trying to convey is just that we want to execute
-    these functions in an order such that their required inputs are already
-    computed.
-  </footnote>:<\float|float|hf>
-    <hrule>
+    handwavy; the idea I'm trying to convey is just that we want to sequence
+    the execution of these functions in such a way that the inputs they
+    depend on have already been computed.\ 
+  </footnote>:
 
-    <\specified-algorithm>
-      <with|font-series|bold|Forward pass through a computation graph>
+  <\specified-algorithm>
+    Forward pass through a computation graph
+  <|specified-algorithm>
+    <with|font-series|bold|Input:> computation graph,
+    (<math|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>>)
 
-      \;
-    <|specified-algorithm>
-      <with|font-series|bold|Input:> computation graph,
-      (<math|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>>)
+    \;
 
-      \;
+    <with|font-series|bold|For> <math|f> in functions inside the
+    computational graph (in a forward fashion):
 
-      <with|font-series|bold|For> <math|f> in functions inside the
-      computational graph (in a forward fashion):
+    \;
 
-      \;
+    <space|2em><math|<around*|(|Y<rsup|<around*|(|f,1|)>>,\<ldots\>,Y<rsup|<around*|(|f,M<rsub|f>|)>>|)>\<leftarrow\>f<around*|(|X<rsup|<around*|(|f,1|)>>,\<ldots\>,X<rsup|<around*|(|f,N<rsub|f>|)>>|)>>
 
-      <space|2em><math|<around*|(|Y<rsup|<around*|(|f,1|)>>,\<ldots\>,Y<rsup|<around*|(|f,M<rsub|f>|)>>|)>\<leftarrow\>f<around*|(|X<rsup|<around*|(|f,1|)>>,\<ldots\>,X<rsup|<around*|(|f,N<rsub|f>|)>>|)>>
+    \;
 
-      \;
-
-      <with|font-series|bold|Output:> (<math|Y<rsup|<around*|(|1|)>>,\<ldots\>,Y<rsup|<around*|(|M|)>>>)
-    </specified-algorithm>
-  </float>
+    <with|font-series|bold|Output:> (<math|Y<rsup|<around*|(|1|)>>,\<ldots\>,Y<rsup|<around*|(|M|)>>>)
+  </specified-algorithm>
 
   <section|Forward-mode automatic differentiation><label|sec:fm>
 
-  In this section, we discuss forward-mode AD for computing the full
-  \PJacobian\Q and a \PJacobian-vector product\Q (\PJVP\Q) of a computation
-  graph.
+  In this section, we discuss forward-mode AD for computing the \PJacobian\Q
+  and a \PJacobian-vector product\Q (\PJVP\Q) of a computation graph.
 
-  <subsection|Understanding <verbatim|jac.jacfwd>>
+  <subsection|Computing the \PJacobian\Q>
 
-  If we apply Equation <reference|eq:tensor-chain-sum> to some
-  <math|<with|color|dark green|f>> inside the computation graph <math|g>, we
-  see that
+  If we apply Equation <reference|eq:tensor-chain-sum> to some <math|f>
+  inside the computation graph <math|g>, we see that
 
   <\equation>
-    <frac|\<partial\> Y<rsup|<around*|(|<with|color|dark
-    green|f>,i|)>>|\<partial\>X<rsup|<around*|(|j|)>>>=<big|sum><rsub|k=1><rsup|N<rsub|f>><frac|\<partial\>
-    Y<rsup|<around*|(|<with|color|dark green|f>,i|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
-    green|f>,k|)>>>:<frac|\<partial\> X<rsup|<around*|(|<with|color|dark
-    green|f>,k|)>>|\<partial\>X<rsup|<around*|(|j|)>>><space|1em><text|for
-    all >i<text| and >j.<label|eq:tensor-chain-sum-rule-f>
+    <frac|\<partial\> <with|color|orange|Y<rsup|<around*|(|f,i|)>>>|\<partial\><with|color|dark
+    green|X<rsup|<around*|(|j|)>>>>=<big|sum><rsub|k=1><rsup|N<rsub|f>><frac|\<partial\>
+    <with|color|orange|Y<rsup|<around*|(|f,i|)>>>|\<partial\><with|color|blue|X<rsup|<around*|(|f,k|)>>>>:<frac|\<partial\>
+    <with|color|blue|X<rsup|<around*|(|f,k|)>>>|\<partial\><with|color|dark
+    green|X<rsup|<around*|(|j|)>>>><rsub|>.<label|eq:tensor-chain-sum-rule-f>
   </equation>
 
-  This relationship shows that, if we want to compute the partial derivatives
-  of <math|f>'s output variables with respect to <math|g>'s input variables,
-  we must first know the partial derivatives of <math|f>'s input variables
-  with respsect to <math|g>'s input variables. As a result, it inspires a
-  \Pforward-style\Q algorithm (i.e., the algorithm first goes through
-  variables closer to <math|g>'s input variables) for computing the partial
-  derivatives of <math|g>'s output variables with respect to <math|g>'s input
-  variables (Algorithm <reference|algo:fmad>). <\float|float|fht>
+  Assuming that <math|f>'s own \PJacobian\Q is known, this relationship shows
+  that, if we want to compute the partial derivatives of
+  <with|color|orange|<math|f>'s output variables><\footnote>
+    Whenever we use the term \Pvariable\Q, we are referring to a scalar.
+  </footnote> with respect to <with|color|dark green|<math|g>'s input
+  variables>, we must first know the partial derivatives of
+  <with|color|blue|<math|f>'s input variables> with respect to
+  <with|color|dark green|<math|g>'s input variables>. As a result, it
+  inspires a \Pforward-style\Q algorithm (i.e., an algorithm that first goes
+  through variables closer to <math|g>'s input variables) for computing the
+  partial derivatives of <math|g>'s output variables with respect to
+  <math|g>'s input variables:
+
+  <\specified-algorithm>
+    Forward-mode automatic differentiaton for computing the
+    \PJacobian\Q<label|algo:fmad>
+  <|specified-algorithm>
+    <with|font-series|bold|Input:> computation graph,
+    <math|<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>>
+
     \;
 
-    <\specified-algorithm>
-      <with|font-series|bold|Forward-mode automatic differentiation for
-      computing the \PJacobian\Q><label|algo:fmad>
-    <|specified-algorithm>
-      <with|font-series|bold|Input:> computation graph,
-      <math|<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>>
+    <with|font-series|bold|Initialize> <math|<around*|(|<around*|(|<frac|\<partial\>X<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>\<leftarrow\>I,<frac|\<partial\>X<rsup|<around*|(|2|)>>|\<partial\>X<rsup|<around*|(|1|)>>>\<leftarrow\>0\<ldots\>,<frac|\<partial\>X<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>\<leftarrow\>0|)>,\<ldots\>,<around*|(|<frac|\<partial\>X<rsup|<around*|(|N|)>>|\<partial\>X<rsup|<around*|(|1|)>>>\<leftarrow\>0,<frac|\<partial\>X<rsup|<around*|(|N|)>>|\<partial\>X<rsup|<around*|(|2|)>>>\<leftarrow\>0,\<ldots\>,<frac|\<partial\>X<rsup|<around*|(|N|)>>|\<partial\>X<rsup|<around*|(|N|)>>>\<leftarrow\>I|)>|)>>
 
-      \;
+    \;
 
-      <with|font-series|bold|Initialize> <math|<around*|(|<around*|(|<frac|\<partial\>X<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>X<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>,\<ldots\>,<around*|(|<frac|\<partial\>X<rsup|<around*|(|N|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>X<rsup|<around*|(|N|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>|)>>
+    <with|font-series|bold|For> <math|f> in functions inside the
+    computational graph (in a forward fashion):
 
-      \;
+    \;
 
-      <with|font-series|bold|For> <math|f> in functions inside the
-      computational graph (in a forward fashion):
+    <space|2em><math|<around*|(|Y<rsup|<around*|(|f,1|)>>,\<ldots\>,Y<rsup|<around*|(|f,M<rsub|f>|)>>|)>\<leftarrow\>f<around*|(|X<rsup|<around*|(|f,1|)>>,\<ldots\>,X<rsup|<around*|(|f,N<rsub|f>|)>>|)>><space|1em>#
+    forward pass
 
-      \;
+    \;
 
-      <space|2em><math|<around*|(|Y<rsup|<around*|(|f,1|)>>,\<ldots\>,Y<rsup|<around*|(|f,M<rsub|f>|)>>|)>\<leftarrow\>f<around*|(|X<rsup|<around*|(|f,1|)>>,\<ldots\>,X<rsup|<around*|(|f,N<rsub|f>|)>>|)>>
+    <space|2em><math|<frac|\<partial\> <with|color|orange|Y<rsup|<around*|(|f,i|)>>>|\<partial\><with|color|dark
+    green|X<rsup|<around*|(|j|)>>>>=<big|sum><rsub|k=1><rsup|N<rsub|f>><frac|\<partial\>
+    <with|color|orange|Y<rsup|<around*|(|f,i|)>>>|\<partial\><with|color|blue|X<rsup|<around*|(|f,k|)>>>>:<frac|\<partial\>
+    <with|color|blue|X<rsup|<around*|(|f,k|)>>>|\<partial\><with|color|dark
+    green|X<rsup|<around*|(|j|)>>>><space|1em><text|for all >i<text| and >j>
 
-      \;
+    \;
 
-      <space|2em><math|<frac|\<partial\>Y<rsup|<around*|(|<with|color|dark
-      green|f>,i|)>>|\<partial\>X<rsup|<around*|(|j|)>>>\<leftarrow\><big|sum><rsub|k=1><rsup|N<rsub|f>><frac|\<partial\>Y<rsup|<around*|(|<with|color|dark
-      green|f>,i|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
-      green|f>,k|)>>>:<frac|\<partial\>X<rsup|<around*|(|<with|color|dark
-      green|f>,k|)>>|\<partial\>X<rsup|<around*|(|j|)>>><space|1em><text|for
-      all >i<text| and >j>
+    <with|font-series|bold|Output:> <math|<around*|(|<around*|(|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>,\<ldots\>,<around*|(|<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>|)>>
+  </specified-algorithm>
 
-      \;
+  where <math|0> denotes the tensor of zeros and <math|I> denotes the
+  \Pidentity tensor\Q, e.g., if <math|><math|X<rsup|<around*|(|1|)>>\<in\>\<bbb-R\><rsup|3>>,
+  then
 
-      <with|font-series|bold|Output:> <math|<around*|(|<around*|(|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>,\<ldots\>,<around*|(|<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|1|)>>>,\<ldots\>,<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|N|)>>>|)>|)>>
-    </specified-algorithm>
-  </float>\ 
+  <\equation*>
+    <around*|(|<frac|\<partial\>X<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>|)><rsub|<around*|(|a
+    b c|)><around*|(|d e f|)>>=<choice|<tformat|<table|<row|<cell|1>|<cell|<text|if
+    >a=d,b=e,c=f>>|<row|<cell|0>|<cell|<text|otherwise>>>>>>.
+  </equation*>
 
-  Note that we need to have a forward pass within Algorithm
+  Note that we need to include a forward pass within Algorithm
   <reference|algo:fmad> (line 4) because we need to evaluate each
-  <math|><math|\<partial\> Y<rsup|<around*|(|i,f|)>>/\<partial\>X<rsup|<around*|(|k,f|)>>>
-  at the actual value of <math|X<rsup|<around*|(|k,f|)>>>. Despite the
-  correctness of Algorithm 2, it does not represent how JAX implements
-  <verbatim|jax.jacfwd>. In Section <reference|sec:fwdjvp>, we derive the
-  algorithm for computing the \PJVP\Q and show how it can be leveraged to
-  compute the full \PJacobian\Q.
+  <math|><math|\<partial\> Y<rsup|<around*|(|f,i|)>>/\<partial\>X<rsup|<around*|(|f,k|)>>>
+  at the actual value of <math|X<rsup|<around*|(|f,k|)>>>. Despite the
+  correctness of Algorithm 2, it doesn't represent how JAX implements
+  <verbatim|jax.jacfwd> at the code level, though it's worth emphasizing that
+  the two ways are mathematically equivalent. In Section
+  <reference|sec:fwdjvp>, we derive the algorithm for computing the \PJVP\Q
+  and show how it can be leveraged to compute the full \PJacobian\Q.
 
   <subsection|Understanding <verbatim|jac.jvp>><label|sec:fwdjvp>
 
@@ -721,7 +759,7 @@
 
   TODO: explain the words tangent and primals in the pushforward context
 
-  <subsection|How JAX uses <verbatim|jac.jvp> to compute the \PJacobian\Q ?>
+  <subsection|JAX uses <verbatim|jac.jvp> to compute the \PJacobian\Q>
 
   Each time <verbatim|jac.jvp> allows us to compute the partial derivatives
   of all output variables with respect to a single input variable. This
@@ -955,7 +993,7 @@
     which is, unanimously, the product of a vector (though transposed) and a
     Jacobian. Clearly, this naming convention was kept even when engineers
     and researchers generalized the input and output of a computation graph
-    to be more than one and/or higher-dimensional.
+    to be more sdthan one and/or higher-dimensional.
   </footnote>. Let's verify that this is indeed what JAX's <verbatim|jax.vjp>
   computes:
 
@@ -1069,26 +1107,21 @@
     Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
     green|f>,j|)>>>+\<cdots\>+W<rsup|<around*|(|M|)>>:<frac|\<partial\>
     Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
-    green|f>,j|)>>>|\<wide-underbrace\>><rsub|\<triangleq\><wide|Y|\<dot\>><rsup|<around*|(|i,f|)>>>=<big|sum><rsub|k=1><rsup|M<rsub|f>><wide*|<around*|(|W<rsup|<around*|(|1|)>>:<frac|\<partial\>
+    green|f>,j|)>>>|\<wide-underbrace\>><rsub|\<triangleq\><wide|X|\<bar\>><rsup|<around*|(|f,
+    i|)>>>=<big|sum><rsub|k=1><rsup|M<rsub|f>><wide*|<around*|(|W<rsup|<around*|(|1|)>>:<frac|\<partial\>
     Y<rsup|<around*|(|1|)>>|\<partial\>Y<rsup|<around*|(|<with|color|dark
     green|f>,k|)>>>+\<cdots\>+W<rsup|<around*|(|M|)>>:<frac|\<partial\>
     Y<rsup|<around*|(|M|)>>|\<partial\>Y<rsup|<around*|(|<with|color|dark
-    green|f>,k|)>>>|)>|\<wide-underbrace\>><rsub|\<triangleq\><wide|X|\<dot\>><rsup|<around*|(|k,f|)>>>:<frac|\<partial\>
+    green|f>,k|)>>>|)>|\<wide-underbrace\>><rsub|\<triangleq\><wide|Y|\<bar\>><rsup|<around*|(|f,k|)>>>:<frac|\<partial\>
     Y<rsup|<around*|(|<with|color|dark green|f>,k|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
     green|f>,j|)>>>,
   </equation*>
 
-  Stopped here last time: should we give these quantities new names?
-
-  \;
-
-  \;
-
   where we have defined two new quantities
-  <math|<wide|Y|\<dot\>><rsup|<around*|(|i,f|)>>> and
-  <math|<wide|X|\<dot\>><rsup|<around*|(|k,f|)>>>. Again, using another
-  \Pforward-style\Q algorithm (Algorithm <reference|algo:jvp>), we can
-  eventually obtain <math|<wide|Y|\<dot\>><rsup|<around*|(|f|)>>>, which is
+  <math|<wide|X|\<bar\>><rsup|<around*|(|f, i|)>>> and
+  <math|<wide|Y|\<bar\>><rsup|<around*|(|f,k|)>>>. Using another
+  \Preverse-style\Q algorithm (Algorithm <reference|algo:jvp>), we can
+  eventually obtain <math|<wide|X|\<bar\>><rsup|<around*|(|f|)>>>, which is
   exactly what we wanted at the beginning of this sub-section (Expression
   <reference|exp:desired-pd> and <reference|exp:jvp>).
   <float|float|t|<\specified-algorithm>
@@ -1097,11 +1130,11 @@
   <|specified-algorithm>
     <with|font-series|bold|Input:> computation graph, primals
     <math|<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>>,
-    tangents <math|<around*|(|V<rsup|<around*|(|1|)>>,\<ldots\>,V<rsup|<around*|(|N|)>>|)>>
+    cotangents <math|<around*|(|W<rsup|<around*|(|1|)>>,\<ldots\>,W<rsup|<around*|(|M|)>>|)>>
 
     <space|3em>
 
-    Initialize <math|<around*|(|<wide|X|\<dot\>><rsup|<around*|(|1|)>>=V<rsup|<around*|(|1|)>>,\<ldots\>,<wide|X|\<dot\>><rsup|<around*|(|N|)>>=V<rsup|<around*|(|N|)>>|)>>
+    Initialize <math|<around*|(|<wide|Y|\<bar\>><rsup|<around*|(|1|)>>=W<rsup|<around*|(|1|)>>,\<ldots\>,<wide|Y|\<bar\>><rsup|<around*|(|M|)>>=W<rsup|<around*|(|M|)>>|)>>
 
     \;
 
@@ -1114,23 +1147,14 @@
 
     \;
 
-    <space|2em><math|Y<rsup|<around*|(|<with|color|dark
-    green|f>,1|)>>,\<ldots\>Y<rsup|<around*|(|<with|color|dark
-    green|f>,M<rsub|f>|)>>\<leftarrow\>f<around*|(|X<rsup|<around*|(|<with|color|dark
-    green|f>,1|)>>,\<ldots\>X<rsup|<around*|(|<with|color|dark
-    green|f>,N<rsub|f>|)>>|)>>
-
-    \;
-
     <space|2em>For <math|i> in <math|1,\<ldots\>M>:
 
     \;
 
-    <space|4em><math|<wide|Y|\<dot\>><rsup|<around*|(|<with|color|dark
-    green|f>,i|)>>\<leftarrow\><big|sum><rsub|k=1><rsup|N<rsub|f>><frac|\<partial\>Y<rsup|<around*|(|<with|color|dark
-    green|f>,i|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
-    green|f>,k|)>>><rsub|>:<wide|X|\<dot\>><rsup|<around*|(|f,k|)>>><space|1em>#
-    line 6
+    <space|4em><math|<wide|X|\<bar\>><rsup|<around*|(|<with|color|dark
+    green|f>,i|)>>\<leftarrow\><big|sum><rsub|k=1><rsup|M<rsub|f>><wide|Y|\<bar\>><rsup|<around*|(|f,k|)>>:<frac|\<partial\>
+    Y<rsup|<around*|(|<with|color|dark green|f>,k|)>>|\<partial\>X<rsup|<around*|(|<with|color|dark
+    green|f>,j|)>>>>
 
     \;
 
@@ -1144,7 +1168,12 @@
 
   <subsection|Understanding <verbatim|jax.jacrev>><label|sec:jaxjacrev>
 
-  \;
+  Each time <verbatim|jac.vjp> allows us to compute the partial derivatives
+  of a single output variable with respect to all input variables. This
+  suggests that, we can simply call <verbatim|jac.vjp> once for every output
+  variable, and asemble the results from all the calls to the Jacobian.
+  Indeed, this is what happens under the hood in JAX and here's how we might
+  do it explicitly:
 
   <section|Comparing forward mode and reverse mode>
 
@@ -1301,64 +1330,70 @@
 
 <\references>
   <\collection>
-    <associate|algo:fmad|<tuple|2|5>>
-    <associate|algo:jvp|<tuple|3|7>>
-    <associate|algo:rmad|<tuple|4|9>>
-    <associate|algo:vjp|<tuple|5|11>>
+    <associate|algo:fmad|<tuple|2|6>>
+    <associate|algo:jvp|<tuple|3|9>>
+    <associate|algo:rmad|<tuple|4|10>>
+    <associate|algo:vjp|<tuple|5|12>>
     <associate|auto-1|<tuple|1|2>>
-    <associate|auto-10|<tuple|4.2|9>>
-    <associate|auto-11|<tuple|4.3|11>>
-    <associate|auto-12|<tuple|5|11>>
-    <associate|auto-13|<tuple|6|12>>
-    <associate|auto-14|<tuple|6.1|12>>
-    <associate|auto-15|<tuple|6.2|12>>
-    <associate|auto-16|<tuple|6.3|12>>
-    <associate|auto-17|<tuple|6.4|12>>
-    <associate|auto-18|<tuple|6.5|12>>
-    <associate|auto-19|<tuple|6.6|12>>
-    <associate|auto-2|<tuple|2|3>>
-    <associate|auto-20|<tuple|6.7|12>>
-    <associate|auto-21|<tuple|6.8|13>>
-    <associate|auto-22|<tuple|6.9|13>>
-    <associate|auto-23|<tuple|6.10|13>>
-    <associate|auto-24|<tuple|6.11|13>>
-    <associate|auto-25|<tuple|6.12|13>>
+    <associate|auto-10|<tuple|4.2|10>>
+    <associate|auto-11|<tuple|4.3|12>>
+    <associate|auto-12|<tuple|5|12>>
+    <associate|auto-13|<tuple|6|13>>
+    <associate|auto-14|<tuple|6.1|13>>
+    <associate|auto-15|<tuple|6.2|13>>
+    <associate|auto-16|<tuple|6.3|13>>
+    <associate|auto-17|<tuple|6.4|13>>
+    <associate|auto-18|<tuple|6.5|13>>
+    <associate|auto-19|<tuple|6.6|13>>
+    <associate|auto-2|<tuple|2|4>>
+    <associate|auto-20|<tuple|6.7|13>>
+    <associate|auto-21|<tuple|6.8|14>>
+    <associate|auto-22|<tuple|6.9|14>>
+    <associate|auto-23|<tuple|6.10|14>>
+    <associate|auto-24|<tuple|6.11|14>>
+    <associate|auto-25|<tuple|6.12|14>>
     <associate|auto-3|<tuple|3|5>>
     <associate|auto-4|<tuple|3.1|5>>
-    <associate|auto-5|<tuple|3.2|5>>
-    <associate|auto-6|<tuple|3.3|7>>
+    <associate|auto-5|<tuple|3.2|6>>
+    <associate|auto-6|<tuple|3.3|8>>
     <associate|auto-7|<tuple|3.4|8>>
-    <associate|auto-8|<tuple|4|9>>
-    <associate|auto-9|<tuple|4.1|9>>
+    <associate|auto-8|<tuple|4|10>>
+    <associate|auto-9|<tuple|4.1|10>>
     <associate|eq:scalar-chain|<tuple|1|2>>
     <associate|eq:tensor-chain|<tuple|3|3>>
-    <associate|eq:tensor-chain-sum|<tuple|4|3>>
+    <associate|eq:tensor-chain-sum|<tuple|4|4>>
     <associate|eq:tensor-chain-sum-rule-f|<tuple|5|5>>
-    <associate|eq:tensor-chain-sum-rule-f-2|<tuple|8|9>>
+    <associate|eq:tensor-chain-sum-rule-f-2|<tuple|8|10>>
     <associate|eq:vector-chain|<tuple|2|2>>
-    <associate|exp:desired-pd|<tuple|6|5>>
+    <associate|exp:desired-pd|<tuple|6|6>>
     <associate|exp:jvp|<tuple|7|6>>
     <associate|footnote-1|<tuple|1|1>>
+    <associate|footnote-10|<tuple|10|7>>
+    <associate|footnote-11|<tuple|11|11>>
     <associate|footnote-2|<tuple|2|1>>
     <associate|footnote-3|<tuple|3|1>>
     <associate|footnote-4|<tuple|4|1>>
-    <associate|footnote-5|<tuple|5|3>>
+    <associate|footnote-5|<tuple|5|4>>
     <associate|footnote-6|<tuple|6|4>>
-    <associate|footnote-7|<tuple|7|6>>
-    <associate|footnote-8|<tuple|8|10>>
+    <associate|footnote-7|<tuple|7|4>>
+    <associate|footnote-8|<tuple|8|5>>
+    <associate|footnote-9|<tuple|9|6>>
     <associate|footnr-1|<tuple|1|1>>
+    <associate|footnr-10|<tuple|10|7>>
+    <associate|footnr-11|<tuple|11|11>>
     <associate|footnr-2|<tuple|2|1>>
     <associate|footnr-3|<tuple|3|1>>
     <associate|footnr-4|<tuple|4|1>>
-    <associate|footnr-5|<tuple|5|3>>
+    <associate|footnr-5|<tuple|5|4>>
     <associate|footnr-6|<tuple|6|4>>
-    <associate|footnr-7|<tuple|7|6>>
-    <associate|footnr-8|<tuple|8|10>>
+    <associate|footnr-7|<tuple|7|4>>
+    <associate|footnr-8|<tuple|8|5>>
+    <associate|footnr-9|<tuple|9|6>>
     <associate|sec:fm|<tuple|3|5>>
-    <associate|sec:fwdjvp|<tuple|3.2|5>>
-    <associate|sec:jaxjacrev|<tuple|4.3|11>>
-    <associate|sec:jaxvjp|<tuple|4.2|9>>
-    <associate|sec:rm|<tuple|4|9>>
+    <associate|sec:fwdjvp|<tuple|3.2|6>>
+    <associate|sec:jaxjacrev|<tuple|4.3|12>>
+    <associate|sec:jaxvjp|<tuple|4.2|10>>
+    <associate|sec:rm|<tuple|4|10>>
   </collection>
 </references>
 
@@ -1369,16 +1404,16 @@
       chain rule> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-1><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>The
-      goal of automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>A
+      main goal of first-order automatic differentiation>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-2><vspace|0.5fn>
 
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|3<space|2spc>Forward-mode
       automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-3><vspace|0.5fn>
 
-      <with|par-left|<quote|1tab>|3.1<space|2spc>Understanding
-      <with|font-family|<quote|tt>|language|<quote|verbatim>|jac.jacfwd>
+      <with|par-left|<quote|1tab>|3.1<space|2spc>Computing the \PJacobian\Q
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4>>
 
