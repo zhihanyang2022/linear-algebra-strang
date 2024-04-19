@@ -75,12 +75,49 @@ html {
 <li>Inverse of AB</li>
 <li>Inverse of \( A^{T} \)</li>
 <li>Elimination as A=LU instead of EA=L; one 2x2 example; one 3x3 example showing the advantage of this representation</li>
-<li>Elimination (i.e., finding LU; just record the row operations in L and the result as U) is \( \mathcal{O} (n^3) \); afterwards solving for different b's is \( \mathcal{O} (n^2) \)</li>
+<li>Elimination (i.e., finding LU; just record the row operations in L and the result as U) is \( O (n^3) \); afterwards solving for different b's is \( O (n^2) \)</li>
 </ul>
 
 <hr>
 
 <p style="color: red; font-weight: bold">Problem set 1 [<a href="./linear_algebra/Problem Set 1.pdf">PDF</a>]</p>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 5: Tranposes, permutations, vector space, subspace, column space [<a href="./linear_algebra/5 Tranposes, permutations, vector space, subspace, column space.pdf">PDF</a>]</p>
+
+<ul>
+<li>Permutation matrices: definition, pre-multiply for row exchanges, \( P^{-1} = P^{T} \)</li>
+<li>\( PA = LU \) (I also gave two examples in JAX)</li>
+<li>Tranpose: definition, symmetric matrices, \( R^T R \) is always symmetric</li>
+<li>Vector space: set of vectors that's closed under linear combination</li>
+<li>Subspace: vector space within a vector space, examples in \(R^2\) and \(R^3\)</li>
+<li>Combinations of columns a matrix form a subspace called the column space</li>
+</ul>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 6: Column space and nullspace [<a href="./linear_algebra/6 Column space and nullspace.pdf">PDF</a>]</p>
+
+<ul>
+<li>Union and intersection of subspaces</li>
+<li>\( Ax = b\) has solution if \( b \in C(A) \)</li>
+<li>Nullspace: the set of all solutions of \( Ax = 0 \)</li>
+</ul>
+
+<hr>
+
+<p style="color: red; font-weight: bold">Lecture 7: Solving \(Ax = 0\): pivot variables, special solutions [<a href="./linear_algebra/7 Solving Ax=0; pivot variables, special solutions.pdf">PDF</a>]</p>
+
+<ul>
+<li>\( Ax = 0 \) => \( Ux = 0 \) (\(U\) is called row-echelon form) => \(Rx = 0\) (\(R\) is called reduced row-echelon form (RREF))</li>
+  <ul>
+  <li>Row-echelon form: zero below pivots</li>
+  <li>Reduced row-echelon form: zero below and above pivots (from row operations upwards)</li>
+  </ul>
+<li>By putting the RREF form back as a sytem of equations, one can write x purely in terms of free variables. Doing so can help us recognize a basis (also called the "special solutions") for the nullspace.</li>
+<li>Structure of RREF and the matrix of special solutions (N) when x is organized as pivot variables above free variables</li>
+</ul>
 
 <hr>
 

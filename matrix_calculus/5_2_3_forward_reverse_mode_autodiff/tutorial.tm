@@ -61,6 +61,8 @@
     potential JAX for machine learning research.
 
     Contrary to machine learning, which usually just requires VJP
+
+    Intentionally avoid differential geoemtry
   </abstract>>
 
   <\table-of-contents|toc>
@@ -77,23 +79,24 @@
     automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-3><vspace|0.5fn>
 
-    <with|par-left|1tab|3.1<space|2spc>Computing the \PJacobian\Q
-    <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+    <with|par-left|1tab|3.1<space|2spc>Algorithm for computing the
+    \PJacobian\Q <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-4>>
 
-    <with|par-left|1tab|3.2<space|2spc>Understanding
-    <with|font-family|tt|language|verbatim|jac.jvp>
+    <with|par-left|1tab|3.2<space|2spc>Algorithm for computing the
+    \PJacobian-vector product\Q (used in <with|font-family|tt|language|verbatim|jax.jvp>)
     <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-5>>
 
-    <with|par-left|1tab|3.3<space|2spc>How JAX uses
-    <with|font-family|tt|language|verbatim|jac.jvp> to compute the
-    \PJacobian\Q ? <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+    <with|par-left|1tab|3.3<space|2spc>How JAX implements
+    <with|font-family|tt|language|verbatim|jax.jacfwd> using
+    <with|font-family|tt|language|verbatim|jax.jvp>
+    <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-6>>
 
-    <with|par-left|1tab|3.4<space|2spc>Defining custom JVP rules /
-    pushforward rules via <with|font-family|tt|language|verbatim|jax.custom_jvp>
-    and <with|font-family|tt|language|verbatim|f.defjvp>
+    <with|par-left|1tab|3.4<space|2spc>Defining custom AD rules using
+    <with|font-family|tt|language|verbatim|jax.custom_jvp> and
+    <with|font-family|tt|language|verbatim|f.defjvp>
     <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
     <no-break><pageref|auto-7>>
 
@@ -471,10 +474,16 @@
 
   <section|Forward-mode automatic differentiation><label|sec:fm>
 
-  In this section, we discuss forward-mode AD for computing the \PJacobian\Q
-  and a \PJacobian-vector product\Q (\PJVP\Q) of a computation graph.
+  This section focuses on forward-mode AD. In Section 3.1, we present an
+  algorithm for computing the \PJacobian\Q. While this algorithm is intuitive
+  and correct, JAX implements a slightly different but mathematically
+  equivalent version at the code level, leveraging an algorithm for computing
+  the \PJacobian-vector product\Q. In Section 3.2, we present this algorithm
+  for computing \PJacobian-vector product\Q, which matches the implementation
+  of <verbatim|jax.jvp>, and discuss how JAX uses <verbatim|jax.jvp> within
+  the implementation of <verbatim|jax.jacfwd> to compute the \PJacobian\Q.
 
-  <subsection|Computing the \PJacobian\Q>
+  <subsection|Algorithm for computing the \PJacobian\Q>
 
   If we apply Equation <reference|eq:tensor-chain-sum> to some <math|f>
   inside the computation graph <math|g>, we see that
@@ -547,23 +556,17 @@
   Note that we need to include a forward pass within Algorithm
   <reference|algo:fmad> (line 4) because we need to evaluate each
   <math|><math|\<partial\> Y<rsup|<around*|(|f,i|)>>/\<partial\>X<rsup|<around*|(|f,k|)>>>
-  at the actual value of <math|X<rsup|<around*|(|f,k|)>>>. Despite the
-  correctness of Algorithm 2, it doesn't represent how JAX implements
-  <verbatim|jax.jacfwd> at the code level, though it's worth emphasizing that
-  the two ways are mathematically equivalent. In Section
-  <reference|sec:fwdjvp>, we derive the algorithm for computing the \PJVP\Q
-  and show how it can be leveraged to compute the full \PJacobian\Q.
+  at the actual value of <math|X<rsup|<around*|(|f,k|)>>>.\ 
 
-  <subsection|Understanding <verbatim|jac.jvp>><label|sec:fwdjvp>
+  <subsection|Algorithm for computing the \PJacobian-vector product\Q (used
+  in <verbatim|jax.jvp>)><label|sec:fwdjvp>
 
-  In certain scenarios, one doesn't need the full \PJacobian\Q, which
-  contains the partial derivative of every output variable with respect to
-  every input variable. Instead, one might only want the partial derivatives
-  of all output variables with respect to one specific input variable, i.e.,
-  a single scalar entry within the entire
+  In certain scenarios, one doesn't need the full \PJacobian\Q. Instead, one
+  might only want the partial derivatives of all output variables with
+  respect to one specific input variable within the entire
   <math|<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>>.
-  Denoting this scalar input variable by <math|x\<in\>\<bbb-R\>>, we organize
-  the desired partial derivatives as
+  Denoting this input variable by <math|x\<in\>\<bbb-R\>>, we organize the
+  desired partial derivatives as
 
   <\equation>
     <around*|(|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>x>,\<ldots\>,<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>x>|)>,<label|exp:desired-pd>
@@ -582,9 +585,9 @@
   where (a) <math|V<rsup|<around*|(|j|)>>> have the same shape as
   <math|X<rsup|<around*|(|j|)>>> and (b) every entry of
   <math|<around*|(|V<rsup|<around*|(|1|)>>,\<ldots\>,V<rsup|<around*|(|N|)>>|)>>
-  is zero <with|font-shape|italic|except> the entry corresponding to
-  <math|x>, the quantity we want to differentiate with respect to. This
-  computation is called the \PJVP\Q<\footnote>
+  is zero <with|font-shape|italic|except> the entry corresponding to <math|x>
+  (this entry would be 1), the quantity we want to differentiate with respect
+  to. This computation is called the \PJVP\Q<\footnote>
     To see where the name \PJacobian-vector product\Q comes from, consider
     the case in which a computation graph takes a single vector input
     <math|<wide|x|\<vect\>>> and outputs another vector
@@ -601,8 +604,8 @@
     this naming convention was kept even when engineers and researchers
     generalized the input and output of a computation graph to be more than
     one and/or higher-dimensional.
-  </footnote>. Let's verify that this is indeed what JAX's <verbatim|jax.jvp>
-  computes:
+  </footnote>. Let's verify that this is what JAX's <verbatim|jax.jvp>
+  produces:
 
   <\python-code>
     # let us choose x to be the (1, 2) entry of X1
@@ -670,11 +673,10 @@
     print(np.allclose(jvp_after_jac_is_computed[1], tangents[1])) \ # true
   </python-code>
 
-  While we could first compute the \PJacobian\Q and then contract the
+  While we could first compute the \PJacobian\Q somehow and then contract the
   matrices it contains with <math|V<rsup|<around*|(|1|)>>,\<ldots\>,V<rsup|<around*|(|M|)>>>
-  (the second way in the code example above), it turns out to be much more
-  efficient to compute the \PJVP\Q directly. Here's how this can be
-  accomplished. Contract both sides of Equation
+  (the second way in the code example above), there turns out to be another
+  way that's much more efficient. First, contract both sides of Equation
   <reference|eq:tensor-chain-sum-rule-f> with <math|V<rsup|<around*|(|j|)>>>,
   obtain
 
@@ -707,11 +709,23 @@
 
   where we have defined two new quantities
   <math|<wide|Y|\<dot\>><rsup|<around*|(|i,f|)>>> and
-  <math|<wide|X|\<dot\>><rsup|<around*|(|k,f|)>>>. Again, using another
-  \Pforward-style\Q algorithm (Algorithm <reference|algo:jvp>), we can
-  eventually obtain <math|<wide|Y|\<dot\>><rsup|<around*|(|f|)>>>, which is
-  exactly what we wanted at the beginning of this sub-section (Expression
-  <reference|exp:desired-pd> and <reference|exp:jvp>).
+  <math|<wide|X|\<dot\>><rsup|<around*|(|k,f|)>>>.\ 
+
+  Building on this result, we can develop another forward-style algorithm
+  (Algorithm <reference|algo:jvp>) to obtain
+  <math|<wide|Y|\<dot\>><rsup|<around*|(|f|)>>>, which is exactly what we
+  wanted in Expression <reference|exp:desired-pd> and <reference|exp:jvp>. In
+  JAX jargon, the inputs of this algorithm
+  <math|<around*|(|X<rsup|<around*|(|1|)>>,\<ldots\>,X<rsup|<around*|(|N|)>>|)>>
+  are called <with|font-shape|italic|primals>,
+  <math|<around*|(|V<rsup|<around*|(|1|)>>,\<ldots\>,V<rsup|<around*|(|N|)>>|)>>
+  are called <with|font-shape|italic|tangents>, and the outputs
+  <math|<around*|(|<wide|Y|\<dot\>><rsup|<around*|(|1|)>><with|color|#a0a0a0|>,\<ldots\>,<wide|Y|\<dot\>><rsup|<around*|(|M|)>><with|color|#a0a0a0|>|)>>
+  are called <with|font-shape|italic|output tangents>; the tangents gets
+  mapped to output tangents by the linear map represented by the
+  \PJacobian\Q, also called the <with|font-shape|italic|pushforward>
+  <with|font-shape|italic|map> of <math|g> at the primals. These are concepts
+  from differential geometry, which is beyond this tutorial.
   <float|float|t|<\specified-algorithm>
     <with|font-series|bold|Reverse-mode automatic differentiation for a
     \PJacobian-vector product\Q><label|algo:jvp>
@@ -754,12 +768,14 @@
     <with|font-series|bold|Output:> <math|<around*|(|<wide|Y|\<dot\>><rsup|<around*|(|1|)>><with|color|#a0a0a0|<around*|(|<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|1|)>>>:V<rsup|<around*|(|1|)>>+\<cdots\>+<frac|\<partial\>Y<rsup|<around*|(|1|)>>|\<partial\>X<rsup|<around*|(|N|)>>>:V<rsup|<around*|(|N|)>>|)>>,\<ldots\>,<wide|Y|\<dot\>><rsup|<around*|(|M|)>><with|color|#a0a0a0|<around*|(|<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|1|)>>>:V<rsup|<around*|(|1|)>>+\<cdots\>+<frac|\<partial\>Y<rsup|<around*|(|M|)>>|\<partial\>X<rsup|<around*|(|N|)>>>:V<rsup|<around*|(|N|)>>|)>>|)>>
   </specified-algorithm>>
 
-  TODO: Obviously, not strictly required to ones and zeros (?), directional
-  derivative and so on
+  <with|font-series|bold|Remark.> It is worth noting that entries in
+  <math|<around*|(|V<rsup|<around*|(|1|)>>,\<ldots\>,V<rsup|<around*|(|N|)>>|)>>
+  can technically take arbitrary values. Therefore, the \PJVP\Q can, more
+  generally, be said to contain the directional derivative of each output
+  variable with respect all input variables.\ 
 
-  TODO: explain the words tangent and primals in the pushforward context
-
-  <subsection|JAX uses <verbatim|jac.jvp> to compute the \PJacobian\Q>
+  <subsection|How JAX implements <verbatim|jax.jacfwd> using
+  <verbatim|jax.jvp>>
 
   Each time <verbatim|jac.jvp> allows us to compute the partial derivatives
   of all output variables with respect to a single input variable. This
@@ -768,12 +784,12 @@
   Indeed, this is what happens under the hood in JAX and here's how we might
   do it explicitly:
 
-  <subsection|Defining custom JVP rules / pushforward rules via
-  <verbatim|jax.custom_jvp> and <verbatim|f.defjvp>>
+  <subsection|Defining custom AD rules using <verbatim|jax.custom_jvp> and
+  <verbatim|f.defjvp>>
 
   Built-in functions of JAX certainly can be differentiated through, but what
   happens when incorporate code from another package into a computation
-  graph. Can we still compute the JVP using JAX? Let's try it out
+  graph. Can we still compute the JVP using JAX? Let's try it out.\ 
 
   <\python-code>
     # previously, this was g
@@ -1331,7 +1347,7 @@
 <\references>
   <\collection>
     <associate|algo:fmad|<tuple|2|6>>
-    <associate|algo:jvp|<tuple|3|9>>
+    <associate|algo:jvp|<tuple|3|8>>
     <associate|algo:rmad|<tuple|4|10>>
     <associate|algo:vjp|<tuple|5|12>>
     <associate|auto-1|<tuple|1|2>>
@@ -1353,20 +1369,20 @@
     <associate|auto-24|<tuple|6.11|14>>
     <associate|auto-25|<tuple|6.12|14>>
     <associate|auto-3|<tuple|3|5>>
-    <associate|auto-4|<tuple|3.1|5>>
+    <associate|auto-4|<tuple|3.1|6>>
     <associate|auto-5|<tuple|3.2|6>>
     <associate|auto-6|<tuple|3.3|8>>
-    <associate|auto-7|<tuple|3.4|8>>
+    <associate|auto-7|<tuple|3.4|9>>
     <associate|auto-8|<tuple|4|10>>
     <associate|auto-9|<tuple|4.1|10>>
     <associate|eq:scalar-chain|<tuple|1|2>>
     <associate|eq:tensor-chain|<tuple|3|3>>
     <associate|eq:tensor-chain-sum|<tuple|4|4>>
-    <associate|eq:tensor-chain-sum-rule-f|<tuple|5|5>>
+    <associate|eq:tensor-chain-sum-rule-f|<tuple|5|6>>
     <associate|eq:tensor-chain-sum-rule-f-2|<tuple|8|10>>
     <associate|eq:vector-chain|<tuple|2|2>>
     <associate|exp:desired-pd|<tuple|6|6>>
-    <associate|exp:jvp|<tuple|7|6>>
+    <associate|exp:jvp|<tuple|7|7>>
     <associate|footnote-1|<tuple|1|1>>
     <associate|footnote-10|<tuple|10|7>>
     <associate|footnote-11|<tuple|11|11>>
@@ -1413,22 +1429,24 @@
       automatic differentiation> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-3><vspace|0.5fn>
 
-      <with|par-left|<quote|1tab>|3.1<space|2spc>Computing the \PJacobian\Q
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <with|par-left|<quote|1tab>|3.1<space|2spc>Algorithm for computing the
+      \PJacobian\Q <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4>>
 
-      <with|par-left|<quote|1tab>|3.2<space|2spc>Understanding
-      <with|font-family|<quote|tt>|language|<quote|verbatim>|jac.jvp>
+      <with|par-left|<quote|1tab>|3.2<space|2spc>Algorithm for computing the
+      \PJacobian-vector product\Q (used in
+      <with|font-family|<quote|tt>|language|<quote|verbatim>|jax.jvp>)
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-5>>
 
-      <with|par-left|<quote|1tab>|3.3<space|2spc>How JAX uses
-      <with|font-family|<quote|tt>|language|<quote|verbatim>|jac.jvp> to
-      compute the \PJacobian\Q ? <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <with|par-left|<quote|1tab>|3.3<space|2spc>How JAX implements
+      <with|font-family|<quote|tt>|language|<quote|verbatim>|jax.jacfwd>
+      using <with|font-family|<quote|tt>|language|<quote|verbatim>|jax.jvp>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-6>>
 
-      <with|par-left|<quote|1tab>|3.4<space|2spc>Defining custom JVP rules /
-      pushforward rules via <with|font-family|<quote|tt>|language|<quote|verbatim>|jax.custom_jvp>
+      <with|par-left|<quote|1tab>|3.4<space|2spc>Defining custom AD rules
+      using <with|font-family|<quote|tt>|language|<quote|verbatim>|jax.custom_jvp>
       and <with|font-family|<quote|tt>|language|<quote|verbatim>|f.defjvp>
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-7>>
